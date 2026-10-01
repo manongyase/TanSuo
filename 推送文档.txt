@@ -1,20 +1,22 @@
 ========================================
   GitHub 推送操作手册
-  项目: https://github.com/manongyase/Life
+  项目: https://github.com/manongyase/TanSuo
   日期: 2026-10-01
 ========================================
 
+※※※ 注解：标记 [手动] 的步骤无法自动化，需要在操作前手动完成 ※※※
+
 【前提条件】
-  1. Watt Toolkit 已安装
-  2. 打开 Watt Toolkit → 网络加速 → 勾选 GitHub → 点击加速
-     （Hosts 模式，不需要设置本地代理端口）
+  [手动] 1. Watt Toolkit 已安装
+  [手动] 2. 打开 Watt Toolkit → 网络加速 → 勾选 GitHub → 点击加速
+           （Hosts 模式，不需要设置本地代理端口）
 
 【日常推送 3 步】
-  打开 PowerShell，执行：
+  [手动] 打开 PowerShell，执行：
 
-  cd F:\Life
+  cd F:\TanSuo
   git add .
-  git commit -m "描述你的改动"
+  [手动] git commit -m "描述你的改动"
 
   ---- 关键：绕过 Watt Toolkit SSL 问题 ----
   git config --global http.sslVerify false
@@ -23,13 +25,13 @@
   ------------------------------------------
 
 【首次初始化（仅第一次用）】
-  cd F:\Life
+  cd F:\TanSuo
   git init
   git add .
   git commit -m "feat: 初始化"
-  git remote add origin https://github.com/manongyase/Life.git
+  git remote add origin https://github.com/manongyase/TanSuo.git
   git branch -M master
-  然后按「日常推送」的步骤推一次
+  [手动] 然后按「日常推送」的步骤推一次
 
 【常见问题】
 
@@ -38,7 +40,7 @@
      想彻底消除：git config --global --unset credential.helper
 
   Q: 提示 "Failed to connect to github.com port 443: Timed out"
-  A: Watt Toolkit 没开 GitHub 加速，回去开一下。
+  A: [手动] Watt Toolkit 没开 GitHub 加速，回去开一下。
 
   Q: 提示 "SSL certificate problem"
   A: 按文档里的 sslVerify false → push → true 流程走。
@@ -47,7 +49,14 @@
   A: 还没有任何提交，先 git add . && git commit -m "init"
 
 【.gitignore 已包含】
-  build/、*.exe、*.dll、*.o、*.obj、*.log、saves/、.vs/、.vscode/、.idea/
+  运行产物目录：天气结果/、新闻结果/、美食结果/、山西菜结果/
+  敏感配置：weather/api.json（含高德 Key）
+  运行时状态：*_call_state.json、feeds.json
+  Python：__pycache__/、*.pyc、*.pyo
+  IDE：.vs/、.vscode/、.idea/
+  系统：.DS_Store、Thumbs.db
+
+【注意】[手动] 首次推送前务必确认 .gitignore 里没有 api.json 等敏感文件被误提交！
 
 【本地分支】master（和 origin/master 关联）
 ========================================

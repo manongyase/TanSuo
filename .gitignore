@@ -11,6 +11,9 @@ weather/api.json
 *_call_state.json
 feeds.json
 
+# ====== push.ps1 日志 ======
+.push-logs/
+
 # ====== Python 缓存 ======
 __pycache__/
 *.pyc
