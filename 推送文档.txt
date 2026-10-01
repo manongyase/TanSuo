@@ -1,0 +1,53 @@
+========================================
+  GitHub 推送操作手册
+  项目: https://github.com/manongyase/Life
+  日期: 2026-10-01
+========================================
+
+【前提条件】
+  1. Watt Toolkit 已安装
+  2. 打开 Watt Toolkit → 网络加速 → 勾选 GitHub → 点击加速
+     （Hosts 模式，不需要设置本地代理端口）
+
+【日常推送 3 步】
+  打开 PowerShell，执行：
+
+  cd F:\Life
+  git add .
+  git commit -m "描述你的改动"
+
+  ---- 关键：绕过 Watt Toolkit SSL 问题 ----
+  git config --global http.sslVerify false
+  git push -u origin master
+  git config --global http.sslVerify true
+  ------------------------------------------
+
+【首次初始化（仅第一次用）】
+  cd F:\Life
+  git init
+  git add .
+  git commit -m "feat: 初始化"
+  git remote add origin https://github.com/manongyase/Life.git
+  git branch -M master
+  然后按「日常推送」的步骤推一次
+
+【常见问题】
+
+  Q: 提示 "credential-osxkeychain is not a git command"
+  A: 无害警告，git 配置里混入了 macOS 的凭证管理器，不影响推送结果。
+     想彻底消除：git config --global --unset credential.helper
+
+  Q: 提示 "Failed to connect to github.com port 443: Timed out"
+  A: Watt Toolkit 没开 GitHub 加速，回去开一下。
+
+  Q: 提示 "SSL certificate problem"
+  A: 按文档里的 sslVerify false → push → true 流程走。
+
+  Q: 提示 "src refspec master does not match any"
+  A: 还没有任何提交，先 git add . && git commit -m "init"
+
+【.gitignore 已包含】
+  build/、*.exe、*.dll、*.o、*.obj、*.log、saves/、.vs/、.vscode/、.idea/
+
+【本地分支】master（和 origin/master 关联）
+========================================

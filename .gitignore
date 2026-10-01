@@ -1,0 +1,26 @@
+# ====== 运行产物（时间戳结果目录） ======
+天气结果/
+新闻结果/
+美食结果/
+山西菜结果/
+
+# ====== API Key / 敏感配置 ======
+weather/api.json
+
+# ====== 运行时状态文件 ======
+*_call_state.json
+feeds.json
+
+# ====== Python 缓存 ======
+__pycache__/
+*.pyc
+*.pyo
+
+# ====== IDE ======
+.vs/
+.vscode/
+.idea/
+
+# ====== 系统 ======
+.DS_Store
+Thumbs.db
