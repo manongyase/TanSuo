@@ -10,24 +10,27 @@
 ═══════════════════════════════════════
 
   ✅ 英文路径放代码，中文路径放运行产物
-  ✅ 代码目录命名：food / news / shanxi_food / weather
-  ✅ 结果目录命名：天气结果 / 新闻结果 / 美食结果 / 山西菜结果
+  ✅ 代码目录命名：douban / food / news / shanxi_food / weather
+  ✅ 结果目录命名：天气结果 / 新闻结果 / 美食结果 / 山西菜结果 / 豆瓣榜单结果
 
   ❌ 禁止在中文路径下放 .py 代码
   ❌ 禁止在英文路径下放时间戳运行结果
 
   当前正确结构：
     TanSuo/
-    ├── food/            (代码)
-    ├── news/            (代码：news.py 旧版聚合 / funny_news.py 搞笑 / tech_news.py 科技)
-    ├── shanxi_food/     (代码)
-    ├── weather/         (代码)
-    ├── push.ps1         (推送脚本)
-    ├── 推送文档.txt      (推送操作手册)
-    ├── 天气结果/         (运行产物，gitignore)
-    ├── 新闻结果/         (运行产物，gitignore)
-    ├── 美食结果/         (运行产物，gitignore)
-    └── 山西菜结果/       (运行产物，gitignore)
+    ├── douban/           (代码：douban.py 豆瓣榜单)
+    ├── food/             (代码)
+    ├── news/             (代码：news.py 旧版聚合 / funny_news.py 搞笑 / tech_news.py 科技)
+    ├── shanxi_food/      (代码)
+    ├── weather/          (代码)
+    ├── push.ps1          (推送脚本)
+    ├── 推送文档.txt       (推送操作手册)
+    ├── AIReadMe.txt       (本文件)
+    ├── 天气结果/          (运行产物，gitignore)
+    ├── 新闻结果/          (运行产物，gitignore)
+    ├── 美食结果/          (运行产物，gitignore)
+    ├── 山西菜结果/        (运行产物，gitignore)
+    └── 豆瓣榜单结果/      (运行产物，gitignore)
 
 
 ═══════════════════════════════════════
@@ -41,12 +44,16 @@
     topurl 新闻     https://news.topurl.cn/api?count=15
     Open-Meteo      https://api.open-meteo.com/v1/forecast（天气备选）
     hitokoto        https://v1.hitokoto.cn/?c=k（一言，随机句子）
+    豆瓣影视榜      https://movie.douban.com/j/search_subjects（电影/剧/综艺/动漫）
 
   ⚠️ 能但要注意：
     高德天气         需 Key（weather/api.json 里有，别提交 git）
     topurl 分类     官方文档只支持 时事/国内/国际/商业，没有"科技"分类
     36氪 gateway    必须 POST，header 要带 Content-Type: application/json
     知乎热榜        纯 GET 就行，不需要 Cookie/签名
+    豆瓣影视榜      不同品类支持的 tag 不一样，电视剧 tag 是热门/国产剧/韩剧/美剧/日剧
+                    电影 tag 是热门/豆瓣高分/最新/经典/冷门佳片
+                    豆瓣读书 JSON 接口已全下线（404），暂无解
 
   ❌ 实测挂了的（别浪费时间试）：
     api.vvhan.com          DNS 解析失败
