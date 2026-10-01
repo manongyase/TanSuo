@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # ============================================================
-#   TanSuo 仓库推送入口 (Git Bash / WSL 版)
-#   用法:
-#     ./push.sh                      # 弹窗输入 commit message
-#     ./push.sh -Log "改动说明"       # 直接带参数
-#   依赖: Git Bash 或 WSL + Windows 自带 PowerShell
+#   TanSuo Repo Push Entry (Git Bash / WSL)
+#   Usage:
+#     ./push.sh                      -> popup for commit msg
+#     ./push.sh -Log "your message"   -> CLI with inline msg
+#   Deps: Git Bash or WSL + Windows built-in PowerShell
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "============================================================"
-echo "  TanSuo 仓库推送 (push.sh)"
+echo "  TanSuo Repo Push (push.sh)"
 echo "============================================================"
 echo ""
 
@@ -21,8 +21,8 @@ else
     PS1_PATH="$(cygpath -w "$SCRIPT_DIR/push.ps1")"
 fi
 
-echo ">>> 触发 push.ps1 ..."
-echo "    参数: $@"
+echo ">>> Launching push.ps1 ..."
+echo "    args: $@"
 echo ""
 
 powershell.exe -ExecutionPolicy Bypass -File "$PS1_PATH" "$@"
@@ -30,7 +30,7 @@ EXIT_CODE=$?
 
 echo ""
 if [ $EXIT_CODE -eq 0 ]; then
-    echo ">>> 推送完成 ✓"
+    echo ">>> Push done."
 else
-    echo ">>> 推送失败 ✗ (exit code: $EXIT_CODE)"
+    echo ">>> Push FAILED.  exit code: $EXIT_CODE"
 fi
