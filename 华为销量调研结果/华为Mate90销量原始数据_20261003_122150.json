@@ -1,0 +1,67 @@
+{
+  "百度搜索-销量新闻": {
+    "status": "ok",
+    "error": null,
+    "data": []
+  },
+  "新闻正文-销量数字": {
+    "status": "fail",
+    "error": "无百度搜索结果",
+    "data": null
+  },
+  "RSS源-销量新闻": {
+    "status": "ok",
+    "error": null,
+    "data": [
+      {
+        "source": "爱范儿",
+        "title": "华为 Mate 90 系列发布：最强 Mate来了，5999 起即日开售",
+        "link": "https://www.ifanr.com/1682801?utm_source=rss&utm_medium=rss&utm_campaign=",
+        "desc": "华为 Mate 90 系列自己就形成了一片机海#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。",
+        "sales_numbers": []
+      },
+      {
+        "source": "爱范儿",
+        "title": "早报｜曝苹果新CEO想更快发产品/华为Mate 90真机进店/GPT‑6.1 Sol推出，价格仅Astra的五分之一",
+        "link": "https://www.ifanr.com/1682554?utm_source=rss&utm_medium=rss&utm_campaign=",
+        "desc": "· DeepSeek Harness 推出桌面端预览版\n· 特斯拉 Roadster 发布会因天气推迟\n#欢迎关注爱范儿官方微信公众号：爱范儿（微信号：ifanr），更多精彩内容第一时间为您奉上。",
+        "sales_numbers": []
+      },
+      {
+        "source": "极客公园",
+        "title": "苹果首款触屏 Macbook 或 10 月发布；AI 能力成本三年下降数千倍创纪录；美人形机器人跳入熔炉，致敬《终结者 2》",
+        "link": "http://www.geekpark.net/news/372069",
+        "desc": "\n华为 Mate90 系列发布，售价 5999 元起\n10 月 1 日，华为 Mate90 系列手机正式发布。华为 Mate90 售价 5999 元起，华为 Mate90 Pro 售价 6999 元起，华为 Mate90 Pro Max 售价 9499 元起，华为 Mate90 Pro Max 典藏版售价 10999 元起，华为 Mate90 RS 非凡大师售价 12999 元起。\n\n影像系统是本",
+        "sales_numbers": [
+          "销量: 300 "
+        ]
+      },
+      {
+        "source": "极客公园",
+        "title": "OpenAI 推出个人 AI 智能体 dots；传豆包将推个人 AI 产品「Spell」；SpaceX 发射星舰成功入轨 | 极客早知道",
+        "link": "http://www.geekpark.net/news/372005",
+        "desc": "\nOpenAI 开发者大会推出智能体 dots，重构会员定价，意图打造 AI 超级入口\n北京时间 9 月 30 日凌晨，OpenAI 举办其宣称规模最大的一届开发者大会，一次性发布 25 项更新，覆盖新模型、API、智能体、插件生态与企业软件市场。大会现场，Sam Altman 公布 ChatGPT Pro 会员调整方案时台下一片沉寂，套餐调价成为本次发布最受争议的内容。\n会员体系重新划分档位：原",
+        "sales_numbers": []
+      },
+      {
+        "source": "极客公园",
+        "title": "Deepseek 桌面版悄悄上线；Muse 大火，扎克伯格跃升全球第四大富豪；OpenAI 被曝筹备推出 ProMax 订阅层级，月费或达 500-600 美元",
+        "link": "http://www.geekpark.net/news/371038",
+        "desc": "\nAnthropic 与 Akamai 达成 7 年 116 亿美元协议，扩充 CPU 算力\n9 月 26 日消息，云计算、网络安全、内容交付企业 Akamai 当地时间 24 日宣布大幅扩展与 Anthropic 的合作关系，两家公司签署了一份为期 7 年、价值 116 亿美元（现汇率约合 779.2 亿元人民币）的合同。\n根据协议，Akamai 将以其分布式人工智能基础设施和软件满足 Anth",
+        "sales_numbers": [
+          "增长率: 263%"
+        ]
+      }
+    ]
+  },
+  "京东评论数": {
+    "status": "fail",
+    "error": "ValueError: 未找到京东商品ID",
+    "data": null
+  },
+  "华为商城评价数": {
+    "status": "fail",
+    "error": "ValueError: 未找到华为商城商品ID",
+    "data": null
+  }
+}
