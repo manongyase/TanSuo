@@ -729,6 +729,18 @@ body {
   align-items: center;
   gap: 10px;
 }
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(0,0,0,.04);
+  border-radius: 20px;
+  font-size: 13px;
+}
+.topbar-user .user-badge { width: 20px; height: 20px; font-size: 10px; }
+.topbar-user .user-name { flex: none; }
+.topbar-user .user-logout { font-size: 14px; }
 
 /* ---------- 桌面端：el-container 侧边栏 ---------- */
 .desktop-root {

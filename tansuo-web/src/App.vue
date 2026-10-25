@@ -715,7 +715,7 @@ function dueType(memo) {
         </div>
         <el-progress type="dashboard" :percentage="progress" :color="current.color" :width="64" />
       </div>
-      <!-- 右：DB + 备忘 -->
+      <!-- 右：DB + 备忘 + 用户 -->
       <div class="head-right">
         <el-tag :type="dbConnected ? 'success' : 'info'" effect="dark" round class="db-tag">
           {{ dbConnected ? 'DB 在线' : 'DB 离线' }}
@@ -723,6 +723,11 @@ function dueType(memo) {
         <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
           <el-button :icon="Bell" @click="openMemoDrawer" plain size="small">备忘</el-button>
         </el-badge>
+        <div class="topbar-user">
+          <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
+          <span class="user-name">{{ currentUser?.username }}</span>
+          <el-icon class="user-logout" @click="doLogout" title="登出"><SwitchButton /></el-icon>
+        </div>
       </div>
     </div>
 
@@ -816,11 +821,6 @@ function dueType(memo) {
         </div>
 
         <div class="sidebar-foot">
-          <div class="foot-user">
-            <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
-            <span class="user-name">{{ currentUser?.username }}</span>
-            <el-icon class="user-logout" @click="doLogout" :title="'登出'"><SwitchButton /></el-icon>
-          </div>
           <div class="foot-status">
             <span class="foot-dot" :class="dbConnected ? 'ok' : 'offline'"></span>
             <span v-if="dbConnected">SQLite · {{ totalItemsInDB }}条</span>
@@ -857,6 +857,11 @@ function dueType(memo) {
                 {{ dbConnected ? 'DB · 在线' : 'DB · 离线' }}
               </el-tag>
             </el-tooltip>
+            <div class="topbar-user">
+              <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
+              <span class="user-name">{{ currentUser?.username }}</span>
+              <el-icon class="user-logout" @click="doLogout" title="登出"><SwitchButton /></el-icon>
+            </div>
           </div>
         </div>
 
