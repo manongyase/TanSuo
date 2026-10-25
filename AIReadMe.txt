@@ -1,6 +1,6 @@
 ========================================
   TanSuo 项目 · AI 踩坑经验手册
-  生成: 2026-10-01
+  更新: 2026-10-25 (新增 D1 REST API 踩坑、tansuo-web 项目)
   用途: 每次执行命令前先过一遍，避免重复踩同坑
 ========================================
 
@@ -23,14 +23,16 @@
     ├── news/             (代码：news.py 旧版聚合 / funny_news.py 搞笑 / tech_news.py 科技)
     ├── shanxi_food/      (代码)
     ├── weather/          (代码)
+    ├── tansuo-web/       (Vue3 + Vite 前端 + Vercel Edge API + Cloudflare D1)
+    │   ├── api/handler.js          ← Vercel Edge Functions 统一入口
+    │   ├── lib/d1-client.js        ← D1 REST API 客户端(本地 + Vercel 通用)
+    │   ├── server/api.js + db.js  ← 本地 dev 用 better-sqlite3
+    │   ├── src/App.vue / api.js / modules.js / main.js
+    │   ├── vite.config.js          ← 本地 5173，挂 server/api.js
+    │   └── vercel.json             ← rewrites /api/* → /api/handler
     ├── push.ps1          (推送脚本)
-    ├── 推送文档.txt       (推送操作手册)
     ├── AIReadMe.txt       (本文件)
-    ├── 天气结果/          (运行产物，gitignore)
-    ├── 新闻结果/          (运行产物，gitignore)
-    ├── 美食结果/          (运行产物，gitignore)
-    ├── 山西菜结果/        (运行产物，gitignore)
-    └── 豆瓣榜单结果/      (运行产物，gitignore)
+    └── 其他结果目录       (gitignore)
 
 
 ═══════════════════════════════════════
@@ -157,5 +159,105 @@
 
   清理运行产物（可选）：
     Remove-Item -Recurse -Force "f:\TanSuo\天气结果","f:\TanSuo\新闻结果","f:\TanSuo\美食结果","f:\TanSuo\山西菜结果"
+
+
+═══════════════════════════════════════
+ 【八、Cloudflare D1 REST API 踩坑 (2026-10-25)】
+═══════════════════════════════════════
+
+  🚨 核心铁律(三条):
+
+  1. D1 REST API 只有 POST /query 端点,没有 /execute
+     单条请求:  body: { sql: "SELECT * FROM items", params: [] }
+     批量请求:  body: { batch: [{ sql: "...", params: [...] }, ...] }
+     INSERT/UPDATE/DELETE 也走 /query,不需要专门的 execute 端点
+
+  2. 响应格式有新旧两种,必须同时兼容:
+     // 新版(D1 实际返回的):result[0].results 直接就是对象数组
+     { result: [{ results: [{ id:"life-1", title:"饭馆", ... }, ...], success:true, meta:{...} }] }
+
+     // 旧版(早期 D1 文档示例):result[0].columns + rows(二维数组)
+     { result: [{ columns:["id","title",...], rows:[["life-1","饭馆",...],...] }] }
+
+     // d1Query 正确写法(handler.js 和 d1-client.js 都要一样):
+     async function d1Query(sql, params = []) {
+       const result = await d1Fetch('/query', { sql, params })
+       if (!result || !result.length) return []
+       const first = result[0]
+       if (first.results && Array.isArray(first.results)) return first.results   // 新版
+       const { columns, rows } = first                                          // 旧版
+       if (columns && rows) return rows.map(row => { ... })
+       return []
+     }
+
+  3. 认证用 Bearer Token,三个环境变量:
+     CLOUDFLARE_ACCOUNT_ID   (32 位 hex)
+     CLOUDFLARE_D1_DATABASE_ID  (UUID,连字符格式)
+     CLOUDFLARE_API_TOKEN    (cfat_ 开头)
+
+  📁 相关文件:
+    tansuo-web/api/handler.js     ← Vercel Edge Functions 用(生产)
+    tansuo-web/lib/d1-client.js   ← 通用客户端(本地 d1-list/test-d1 脚本也用)
+    这两个文件里的 d1Query / d1Execute / d1Batch 必须保持一致
+
+  🔍 调试技巧:
+    - /api/health 端点:真跑 SELECT COUNT(*),返回 itemsInDb / dbQueryError
+    - /api/items/raw 端点:绕过 d1Query 解析,直接返回 D1 REST API 原始 JSON
+    - 如果 itemsInDb === null 而不是 0,说明 d1Query 解析到了空数组(不是没数据)
+    - PowerShell 里查外网接口经常被墙/超时,让用户在浏览器里访问后贴 JSON
+
+
+═══════════════════════════════════════
+ 【九、tansuo-web 双仓库推送流程】
+═══════════════════════════════════════
+
+  两个独立仓库,每次前端 API 层改动要推两次:
+
+    仓库 1:  D:\前端_页面        →  https://github.com/manongyase/WebPage.git  (main 分支)
+    仓库 2:  f:\TanSuo           →  https://github.com/manongyase/TanSuo.git   (master 分支)
+
+  推送流程(已验证):
+    1. 改 f:\TanSuo\tansuo-web 下的源码
+    2. 把改过的文件复制到 D:\前端_页面\tansuo-web
+       Copy-Item "f:\TanSuo\tansuo-web\xxx.js" "D:\前端_页面\tansuo-web\xxx.js" -Force
+    3. 先推 WebPage(Vercel 部署源):
+       Set-Location "D:\前端_页面"
+       git add . ; git commit -m "..."
+       git config --global http.sslVerify false
+       git push -u origin main
+       git config --global http.sslVerify true
+    4. 再推 TanSuo:
+       Set-Location "f:\TanSuo"
+       git add . ; git commit -m "..."
+       git config --global http.sslVerify false
+       git push -u origin master
+       git config --global http.sslVerify true
+
+  ⚠️ 注意:
+    - Vercel 自动监听 WebPage 仓库 main 分支,推送后 30~60 秒部署完成
+    - vercel.json rewrites 把 /api/* 全部转发给 /api/handler(Edge Function)
+    - 本地 dev 用 better-sqlite3(server/db.js),不连 D1
+
+
+═══════════════════════════════════════
+ 【十、安全:GitHub Push Protection】
+═══════════════════════════════════════
+
+  GitHub 仓库开了 secret-scanning,检测到 token 会拒绝推送:
+
+    ❌ 不能推的文件:
+       list-d1.cjs     ← 含硬编码 Cloudflare Account Token
+       test-d1.cjs     ← 同上
+
+    ✅ 解决办法:
+       1. 本地保留文件(需要用),但加到 .gitignore
+       2. git rm --cached list-d1.cjs test-d1.cjs  (从 git 追踪中移除,保留本地)
+       3. git commit --amend -m "..."  (如果已经 commit 过,amend 掉)
+       4. 推完后建议轮换 token(因为本地历史里有)
+
+    .gitignore 追加:
+       list-d1.cjs
+       test-d1.cjs
+       *.cjs.local
 
 ========================================
