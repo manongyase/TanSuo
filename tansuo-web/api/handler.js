@@ -335,20 +335,48 @@ export default async function handler(req) {
       }
     }
 
-    // /api/debug-users — 调试:直接返回 D1 users 表 + 当前 cookie 解析结果
+    // /api/debug-users — 调试:把 cookie 解析全过程每一步都吐出来
     if (pathname.endsWith('/api/debug-users') && method === 'GET') {
       try {
         await ensureUsersTable()
         const allUsers = await d1Query('SELECT username, role FROM users ORDER BY username')
-        const cookie = parseCookie(req.headers.get('cookie'))
-        const sess = verifySession(cookie[SESSION_COOKIE])
-        return new Response(JSON.stringify({
-          usersInD1: allUsers,
-          currentCookieUser: sess,
-          cookieRaw: cookie[SESSION_COOKIE] || null
-        }, null, 2), { headers: { 'Content-Type': 'application/json' } })
+        const rawCookieHeader = req.headers.get('cookie')
+        const cookie = parseCookie(rawCookieHeader)
+        const sid = cookie[SESSION_COOKIE] || null
+
+        const debug = {
+          cookieHeaderRaw: rawCookieHeader,
+          cookieParsedKeys: Object.keys(cookie),
+          sidRaw: sid,
+          secretLen: getSessionSecret().length,
+          secretPrefix: getSessionSecret().slice(0, 4) + '...'
+        }
+
+        if (sid) {
+          try {
+            const decoded = atob(sid)
+            const dotIdx = decoded.lastIndexOf('.')
+            const payload = decoded.slice(0, dotIdx)
+            const sig = decoded.slice(dotIdx + 1)
+            debug.decoded = decoded
+            debug.dotIdx = dotIdx
+            debug.payload = payload
+            debug.sig = sig
+            debug.sigLen = sig.length
+            debug.expectedSig = await hmacSign(payload)
+            debug.sigsMatch = (await hmacSign(payload)) === sig
+            debug.payloadParsed = JSON.parse(payload)
+          } catch (e) {
+            debug.decodeError = String(e.message || e)
+          }
+          debug.verifySessionResult = await verifySession(sid)
+        }
+
+        debug.usersInD1 = allUsers
+
+        return new Response(JSON.stringify(debug, null, 2), { headers: { 'Content-Type': 'application/json' } })
       } catch (e) {
-        return new Response(JSON.stringify({ error: String(e.message || e) }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+        return new Response(JSON.stringify({ error: String(e.message || e), stack: e.stack }, null, 2), { status: 500, headers: { 'Content-Type': 'application/json' } })
       }
     }
 
