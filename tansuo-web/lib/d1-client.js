@@ -56,14 +56,15 @@ export async function d1Query(sql, params = []) {
 
 // 执行单条写操作（INSERT/UPDATE/DELETE）
 export async function d1Execute(sql, params = []) {
-  await d1Fetch('/execute', { sql, params })
+  // Cloudflare D1 REST API 只有 /query 端点（不存在 /execute）
+  await d1Fetch('/query', { sql, params })
 }
 
-// 批量执行多条命令（事务）
+// 批量执行多条命令
 export async function d1Batch(commands) {
-  // commands = [{ sql, params }]
-  await d1Fetch('/execute', {
-    commands: commands.map(c => ({ sql: c.sql, params: c.params || [] }))
+  // Cloudflare D1 REST API 批量格式: { batch: [{ sql, params }] }
+  await d1Fetch('/query', {
+    batch: commands.map(c => ({ sql: c.sql, params: c.params || [] }))
   })
 }
 

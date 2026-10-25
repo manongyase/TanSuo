@@ -82,12 +82,14 @@ async function d1QueryScalar(sql, params = []) {
 }
 
 async function d1Execute(sql, params = []) {
-  await d1Fetch('/execute', { sql, params })
+  // Cloudflare D1 REST API 只有 /query 端点（不存在 /execute）
+  await d1Fetch('/query', { sql, params })
 }
 
 async function d1Batch(commands) {
-  await d1Fetch('/execute', {
-    commands: commands.map(c => ({ sql: c.sql, params: c.params || [] }))
+  // Cloudflare D1 REST API 批量格式: { batch: [{ sql, params }] }
+  await d1Fetch('/query', {
+    batch: commands.map(c => ({ sql: c.sql, params: c.params || [] }))
   })
 }
 
