@@ -145,7 +145,7 @@ async function ensureUsersTable() {
       created_at TEXT DEFAULT (datetime('now'))
     )
   `)
-  // 检查是否已存在
+  // 只在 users 表完全空时插种子用户(幂等,只跑一次)
   const rows = await d1Query('SELECT COUNT(*) AS c FROM users')
   if (!rows.length || rows[0].c === 0) {
     const adminHash = await hashPassword('宇宙之疯牛倜傥')
@@ -155,9 +155,6 @@ async function ensureUsersTable() {
       { sql: 'INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)', params: ['张文秀', xwHash, 'viewer'] }
     ])
   }
-  // 保险:无论如何,确保角色正确(哪怕早期数据 role 存错了)
-  await d1Execute("UPDATE users SET role='admin' WHERE username='admin'")
-  await d1Execute("UPDATE users SET role='viewer' WHERE username='张文秀'")
   usersInitialized = true
 }
 
