@@ -40,13 +40,21 @@ async function d1Fetch(path, body) {
 async function d1Query(sql, params = []) {
   const result = await d1Fetch('/query', { sql, params })
   if (!result || !result.length) return []
-  const { columns, rows } = result[0]
-  if (!columns || !rows) return []
-  return rows.map(row => {
-    const obj = {}
-    columns.forEach((col, i) => { obj[col] = row[i] })
-    return obj
-  })
+  const first = result[0]
+  // 新版格式: result[0].results 直接是对象数组
+  if (first.results && Array.isArray(first.results)) {
+    return first.results
+  }
+  // 旧版格式: result[0].columns + rows(二维数组)
+  const { columns, rows } = first
+  if (columns && rows) {
+    return rows.map(row => {
+      const obj = {}
+      columns.forEach((col, i) => { obj[col] = row[i] })
+      return obj
+    })
+  }
+  return []
 }
 
 // 返回 D1 REST API 的完整原始响应（调试用）

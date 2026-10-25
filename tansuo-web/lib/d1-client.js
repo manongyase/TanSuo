@@ -36,15 +36,22 @@ async function d1Fetch(path, body) {
 // 执行单条查询（SELECT），返回行数组
 export async function d1Query(sql, params = []) {
   const result = await d1Fetch('/query', { sql, params })
-  // D1 返回 result = [{ columns: [...], rows: [...] }]
   if (!result || !result.length) return []
-  const { columns, rows } = result[0]
-  if (!columns || !rows) return []
-  return rows.map(row => {
-    const obj = {}
-    columns.forEach((col, i) => { obj[col] = row[i] })
-    return obj
-  })
+  const first = result[0]
+  // 新版格式: result[0].results 直接是对象数组
+  if (first.results && Array.isArray(first.results)) {
+    return first.results
+  }
+  // 旧版格式: result[0].columns + rows(二维数组)
+  const { columns, rows } = first
+  if (columns && rows) {
+    return rows.map(row => {
+      const obj = {}
+      columns.forEach((col, i) => { obj[col] = row[i] })
+      return obj
+    })
+  }
+  return []
 }
 
 // 执行单条写操作（INSERT/UPDATE/DELETE）
