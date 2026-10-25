@@ -129,16 +129,20 @@ function parseCookie(header) {
 }
 
 function setSessionCookie(headers, sid, maxAgeSec) {
+  // base64 字符集 A-Za-z0-9+/= 本身就是 cookie-safe (RFC 6265),不要 encodeURIComponent!
+  // 浏览器 Set-Cookie 的值不会自动 URL 解码,encode 了就永远带着 %xx 回来,atob 会炸
   const parts = [
-    `${SESSION_COOKIE}=${encodeURIComponent(sid)}`,
+    `${SESSION_COOKIE}=${sid}`,
     'Path=/',
-    'SameSite=Lax'     // 同源登录场景 Lax 最稳,Chrome 不会拒存
+    'SameSite=Lax'
   ]
   if (maxAgeSec > 0) parts.push(`Max-Age=${maxAgeSec}`)
   else parts.push('Max-Age=0')
-  // Edge Response headers 用 append
-  if (headers.append) headers.append('Set-Cookie', parts.join('; '))
-  else headers['Set-Cookie'] = parts.join('; ')
+  const cookieValue = parts.join('; ')
+  // Vercel Edge:显式 Headers.append 比 plain object 更稳
+  if (headers.append) headers.append('Set-Cookie', cookieValue)
+  else if (headers instanceof Headers) headers.append('Set-Cookie', cookieValue)
+  else headers['Set-Cookie'] = cookieValue
 }
 
 // users 表是否已建 + 种子用户是否已插入
