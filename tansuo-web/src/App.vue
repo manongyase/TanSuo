@@ -81,8 +81,8 @@ const dbConnected = ref(false)
 const dbEmpty = ref(false)   // 后端有连接但 DB 是空的 → 可能需要从 localStorage 迁移
 
 // UI 状态
-const activeKey = ref(MODULES[0].key)
-const keyword = ref('')
+const activeKey = ref(localStorage.getItem('tansuo_active') || MODULES[0].key)
+const keyword = ref(localStorage.getItem('tansuo_keyword') || '')
 const dialogVisible = ref(false)
 const editingId = ref(null)
 const form = ref({ title: '', tag: '', note: '', status: 'todo' })
@@ -322,6 +322,10 @@ watch(
   },
   { deep: true }
 )
+
+// UI 状态持久化
+watch(activeKey, (v) => localStorage.setItem('tansuo_active', v))
+watch(keyword, (v) => localStorage.setItem('tansuo_keyword', v))
 
 function pad(n) {
   return String(n).padStart(2, '0')
