@@ -1,11 +1,68 @@
 <script setup>
 import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled } from '@element-plus/icons-vue'
+import { Search, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton } from '@element-plus/icons-vue'
 import { MODULES, STATUS_MAP, STORAGE_KEY, MEMO_STORAGE_KEY, DEFAULT_MEMOS } from './modules'
 import api, { pingDb, fetchAllItems, fetchAllMemos, saveItems, saveMemos, removeItem as removeItemFromApi, removeMemo as removeMemoFromApi, migrateFromLocalStorage, dbStats } from './api.js'
 
 const NEXT_STATUS = { todo: 'doing', doing: 'done', done: 'todo' }
+
+// ---------- 鉴权系统 ----------
+const AUTH_KEY = 'tansuo-web-auth'
+const AUTH_EXPIRE_MS = 3 * 24 * 60 * 60 * 1000  // 3 天
+
+const USERS = [
+  { username: 'admin',   password: '宇宙之疯牛倜傥', role: 'admin'   },
+  { username: '张文秀',  password: '张文秀',        role: 'viewer' }
+]
+
+const currentUser = ref(null)   // { username, role }
+
+// 登录表单
+const loginForm = ref({ username: '', password: '' })
+const loginLoading = ref(false)
+
+function checkAuth() {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY)
+    if (!raw) return false
+    const data = JSON.parse(raw)
+    if (!data.username || !data.role || !data.expireAt) return false
+    if (Date.now() > data.expireAt) {
+      localStorage.removeItem(AUTH_KEY)
+      return false
+    }
+    currentUser.value = { username: data.username, role: data.role }
+    return true
+  } catch { return false }
+}
+
+function doLogin() {
+  loginLoading.value = true
+  const u = loginForm.value.username.trim()
+  const p = loginForm.value.password
+  const found = USERS.find(x => x.username === u && x.password === p)
+  loginLoading.value = false
+  if (!found) {
+    ElMessage.error('用户名或密码不对')
+    return
+  }
+  const data = {
+    username: found.username,
+    role: found.role,
+    expireAt: Date.now() + AUTH_EXPIRE_MS
+  }
+  localStorage.setItem(AUTH_KEY, JSON.stringify(data))
+  currentUser.value = { username: found.username, role: found.role }
+  ElMessage.success('登录成功')
+}
+
+function doLogout() {
+  localStorage.removeItem(AUTH_KEY)
+  currentUser.value = null
+}
+
+const canEdit = computed(() => currentUser.value?.role === 'admin')
 
 function createInitial() {
   return Object.fromEntries(MODULES.map((m) => [m.key, m.items.map((i) => ({ ...i }))]))
@@ -49,6 +106,8 @@ function setupBreakpoint() {
 
 onMounted(async () => {
   setupBreakpoint()
+  // 鉴权:没登录或已过期,跳过数据初始化
+  if (!checkAuth()) return
   await initializeFromBackend()
   await refreshDbBar()
 })
@@ -589,7 +648,33 @@ function dueType(memo) {
 </script>
 
 <template>
-  <!-- ===== 移动端：纯纵向，没有 el-aside ===== -->
+  <!-- ===== 未登录:登录页面 ===== -->
+  <div v-if="!currentUser" class="login-page">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-mark">T</div>
+        <div>
+          <strong>TanSuo</strong>
+          <span>探索空间 · 请先登录</span>
+        </div>
+      </div>
+      <h2 class="login-title">欢迎回来</h2>
+      <p class="login-sub">输入用户名和密码进入</p>
+      <el-form :model="loginForm" label-position="top" @submit.prevent="doLogin">
+        <el-form-item label="用户名">
+          <el-input v-model="loginForm.username" :prefix-icon="User" placeholder="admin 或 张文秀" autocomplete="username" />
+        </el-form-item>
+        <el-form-item label="密码">
+          <el-input v-model="loginForm.password" :prefix-icon="Lock" type="password" show-password placeholder="请输入密码" autocomplete="current-password" @keyup.enter="doLogin" />
+        </el-form-item>
+        <el-button type="primary" :loading="loginLoading" class="login-btn" @click="doLogin">登 录</el-button>
+      </el-form>
+      <p class="login-tip">管理员可增删改 · 只读账号仅查看</p>
+    </div>
+  </div>
+
+  <!-- ===== 已登录:主应用 ===== -->
+  <template v-else>
   <div v-if="isMobile" class="app mobile-app">
     <!-- 顶部 tab bar -->
     <nav class="mobile-tabs">
@@ -639,7 +724,7 @@ function dueType(memo) {
     <div class="content">
       <div class="toolbar">
         <el-input v-model="keyword" class="search" placeholder="搜索标题、标签或备注" clearable :prefix-icon="Search" />
-        <el-button type="primary" :icon="Plus" @click="openDialog">新增条目</el-button>
+        <el-button v-if="canEdit" type="primary" :icon="Plus" @click="openDialog">新增条目</el-button>
       </div>
 
       <el-row v-if="filtered.length" :gutter="16">
@@ -647,7 +732,7 @@ function dueType(memo) {
           <el-card v-if="isGoalItem(item)" class="item-card goal-card" shadow="hover">
             <div class="item-head">
               <el-tag size="small" effect="plain" :color="current.color">{{ item.tag }}</el-tag>
-              <el-tag size="small" :type="STATUS_MAP[item.status].type" effect="light" class="status-tag" @click="cycleStatus(item)">{{ STATUS_MAP[item.status].label }}</el-tag>
+              <el-tag size="small" :type="STATUS_MAP[item.status].type" effect="light" class="status-tag" @click="canEdit && cycleStatus(item)">{{ STATUS_MAP[item.status].label }}</el-tag>
             </div>
             <h3>{{ item.title }}</h3>
             <p v-if="item.note" class="item-note">{{ item.note }}</p>
@@ -659,8 +744,8 @@ function dueType(memo) {
             <div class="goal-progress-row">
               <el-progress :percentage="goalProgressPercent(item)" :color="current.color" :stroke-width="10" class="goal-progress" />
               <div class="goal-adjust">
-                <el-button size="small" @click="adjustCurrent(item, -1)">-1</el-button>
-                <el-button size="small" @click="adjustCurrent(item, 1)">+1</el-button>
+                <el-button v-if="canEdit" size="small" @click="adjustCurrent(item, -1)">-1</el-button>
+                <el-button v-if="canEdit" size="small" @click="adjustCurrent(item, 1)">+1</el-button>
               </div>
             </div>
             <div class="goal-deadline">
@@ -672,23 +757,23 @@ function dueType(memo) {
             <div class="item-foot">
               <span class="item-date"><el-icon><Calendar /></el-icon>创建 {{ item.date }}</span>
               <div class="foot-actions">
-                <el-button link type="primary" :icon="Edit" @click="openEditDialog(item)">编辑</el-button>
-                <el-button link type="danger" :icon="Delete" @click="removeItem(item)">删除</el-button>
+                <el-button link type="primary" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
+                <el-button link type="danger" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
               </div>
             </div>
           </el-card>
           <el-card v-else class="item-card" shadow="hover">
             <div class="item-head">
               <el-tag size="small" effect="plain">{{ item.tag }}</el-tag>
-              <el-tag size="small" :type="STATUS_MAP[item.status].type" effect="light" class="status-tag" @click="cycleStatus(item)">{{ STATUS_MAP[item.status].label }}</el-tag>
+              <el-tag size="small" :type="STATUS_MAP[item.status].type" effect="light" class="status-tag" @click="canEdit && cycleStatus(item)">{{ STATUS_MAP[item.status].label }}</el-tag>
             </div>
             <h3>{{ item.title }}</h3>
             <p class="item-note">{{ item.note || '还没有备注' }}</p>
             <div class="item-foot">
               <span class="item-date"><el-icon><Calendar /></el-icon>{{ item.date }}</span>
               <div class="foot-actions">
-                <el-button link type="primary" :icon="Edit" @click="openEditDialog(item)">编辑</el-button>
-                <el-button link type="danger" :icon="Delete" @click="removeItem(item)">删除</el-button>
+                <el-button link type="primary" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
+                <el-button link type="danger" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
               </div>
             </div>
           </el-card>
@@ -726,6 +811,11 @@ function dueType(memo) {
         </div>
 
         <div class="sidebar-foot">
+          <div class="foot-user">
+            <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
+            <span class="user-name">{{ currentUser?.username }}</span>
+            <el-icon class="user-logout" @click="doLogout" :title="'登出'"><SwitchButton /></el-icon>
+          </div>
           <div class="foot-status">
             <span class="foot-dot" :class="dbConnected ? 'ok' : 'offline'"></span>
             <span v-if="dbConnected">SQLite · {{ totalItemsInDB }}条</span>
@@ -733,7 +823,7 @@ function dueType(memo) {
           </div>
           <div class="foot-actions">
             <el-button link type="primary" size="small" :loading="checkingDb" @click="checkDbIntegrity">🔍 检查</el-button>
-            <el-button link type="success" size="small" :loading="syncingDb" @click="manualSyncToDb">💾 同步</el-button>
+            <el-button link type="success" size="small" v-if="canEdit" :loading="syncingDb" @click="manualSyncToDb">💾 同步</el-button>
           </div>
         </div>
       </el-aside>
@@ -768,7 +858,7 @@ function dueType(memo) {
         <div class="content">
         <div class="toolbar">
           <el-input v-model="keyword" class="search" placeholder="搜索标题、标签或备注" clearable :prefix-icon="Search" />
-          <el-button type="primary" :icon="Plus" @click="openDialog">新增条目</el-button>
+          <el-button v-if="canEdit" type="primary" :icon="Plus" @click="openDialog">新增条目</el-button>
         </div>
 
         <el-row v-if="filtered.length" :gutter="16">
@@ -776,7 +866,7 @@ function dueType(memo) {
             <el-card v-if="isGoalItem(item)" class="item-card goal-card" shadow="hover">
               <div class="item-head">
                 <el-tag size="small" effect="plain" :color="current.color">{{ item.tag }}</el-tag>
-                <el-tag size="small" :type="STATUS_MAP[item.status].type" effect="light" class="status-tag" @click="cycleStatus(item)">{{ STATUS_MAP[item.status].label }}</el-tag>
+                <el-tag size="small" :type="STATUS_MAP[item.status].type" effect="light" class="status-tag" @click="canEdit && cycleStatus(item)">{{ STATUS_MAP[item.status].label }}</el-tag>
               </div>
               <h3>{{ item.title }}</h3>
               <p v-if="item.note" class="item-note">{{ item.note }}</p>
@@ -801,23 +891,23 @@ function dueType(memo) {
               <div class="item-foot">
                 <span class="item-date"><el-icon><Calendar /></el-icon>创建 {{ item.date }}</span>
                 <div class="foot-actions">
-                  <el-button link type="primary" :icon="Edit" @click="openEditDialog(item)">编辑</el-button>
-                  <el-button link type="danger" :icon="Delete" @click="removeItem(item)">删除</el-button>
+                  <el-button link type="primary" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
+                  <el-button link type="danger" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
                 </div>
               </div>
             </el-card>
             <el-card v-else class="item-card" shadow="hover">
               <div class="item-head">
                 <el-tag size="small" effect="plain">{{ item.tag }}</el-tag>
-                <el-tag size="small" :type="STATUS_MAP[item.status].type" effect="light" class="status-tag" @click="cycleStatus(item)">{{ STATUS_MAP[item.status].label }}</el-tag>
+                <el-tag size="small" :type="STATUS_MAP[item.status].type" effect="light" class="status-tag" @click="canEdit && cycleStatus(item)">{{ STATUS_MAP[item.status].label }}</el-tag>
               </div>
               <h3>{{ item.title }}</h3>
               <p class="item-note">{{ item.note || '还没有备注' }}</p>
               <div class="item-foot">
                 <span class="item-date"><el-icon><Calendar /></el-icon>{{ item.date }}</span>
                 <div class="foot-actions">
-                  <el-button link type="primary" :icon="Edit" @click="openEditDialog(item)">编辑</el-button>
-                  <el-button link type="danger" :icon="Delete" @click="removeItem(item)">删除</el-button>
+                  <el-button link type="primary" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
+                  <el-button link type="danger" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
                 </div>
               </div>
             </el-card>
@@ -892,7 +982,7 @@ function dueType(memo) {
           <h2>备忘录</h2>
           <p>共 {{ memos.length }} 条 · 待办 {{ upcomingCount }} 条</p>
         </div>
-        <el-button type="primary" :icon="Plus" @click="openAddMemoDialog">新增备忘</el-button>
+        <el-button v-if="canEdit" type="primary" :icon="Plus" @click="openAddMemoDialog">新增备忘</el-button>
       </div>
 
       <div class="memo-list">
@@ -918,8 +1008,8 @@ function dueType(memo) {
             </div>
           </div>
           <div class="memo-actions">
-            <el-button link type="primary" :icon="Edit" @click="openEditMemo(memo)" title="编辑" />
-            <el-button link type="danger" :icon="Delete" @click="removeMemo(memo)" title="删除" />
+            <el-button v-if="canEdit" link type="primary" :icon="Edit" @click="openEditMemo(memo)" title="编辑" />
+            <el-button v-if="canEdit" link type="danger" :icon="Delete" @click="removeMemo(memo)" title="删除" />
           </div>
         </div>
       </div>
@@ -974,4 +1064,5 @@ function dueType(memo) {
       </template>
     </el-dialog>
   </div>
+  </template>
 </template>
