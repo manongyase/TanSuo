@@ -37,7 +37,7 @@ function checkAuth() {
   } catch { return false }
 }
 
-function doLogin() {
+async function doLogin() {
   loginLoading.value = true
   const u = loginForm.value.username.trim()
   const p = loginForm.value.password
@@ -55,11 +55,15 @@ function doLogin() {
   localStorage.setItem(AUTH_KEY, JSON.stringify(data))
   currentUser.value = { username: found.username, role: found.role }
   ElMessage.success('登录成功')
+  // 登录后立即连接后端 + 拉数据
+  await initializeFromBackend()
+  await refreshDbBar()
 }
 
 function doLogout() {
   localStorage.removeItem(AUTH_KEY)
   currentUser.value = null
+  dbConnected.value = false
 }
 
 const canEdit = computed(() => currentUser.value?.role === 'admin')
