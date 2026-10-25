@@ -981,8 +981,10 @@ function dueType(memo) {
         </div>  <!-- /content -->
       </div>  <!-- /main-wrap -->
     </el-container>  <!-- /desktop-layout -->
+  </div>
 
-    <el-dialog v-model="dialogVisible" :title="editingId ? `编辑 · ${current.name}` : `新增 · ${current.name}`" width="min(520px, 92%)" top="5vh">
+  <!-- ===== 全局组件(dialog/drawer):两个布局分支都渲染 ===== -->
+  <el-dialog v-model="dialogVisible" :title="editingId ? `编辑 · ${current.name}` : `新增 · ${current.name}`" width="min(520px, 92%)" top="5vh">
       <el-form :model="form" label-position="top">
         <el-form-item label="标题" required>
           <el-input v-model="form.title" placeholder="要记下什么？" maxlength="40" show-word-limit />
@@ -1162,7 +1164,6 @@ function dueType(memo) {
         <el-button type="primary" @click="_copyDebug">一键复制</el-button>
       </template>
     </el-dialog>
-  </div>
   </template>
 </template>
 
