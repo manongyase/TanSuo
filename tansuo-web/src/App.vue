@@ -84,6 +84,15 @@ const dbEmpty = ref(false)   // 后端有连接但 DB 是空的 → 可能需要
 const activeKey = ref(localStorage.getItem('tansuo_active') || MODULES[0].key)
 const keyword = ref(localStorage.getItem('tansuo_keyword') || '')
 const dialogVisible = ref(false)
+
+// 移动端 touch→click 双保险：300ms 防抖，防止两次都触发
+let _lastTrigger = 0
+function safeTrigger(fn, ...args) {
+  const now = Date.now()
+  if (now - _lastTrigger < 300) return
+  _lastTrigger = now
+  return fn(...args)
+}
 const editingId = ref(null)
 const form = ref({ title: '', tag: '', note: '', status: 'todo' })
 const memoDrawer = ref(false)
@@ -725,7 +734,7 @@ function dueType(memo) {
           {{ dbConnected ? 'DB 在线' : 'DB 离线' }}
         </el-tag>
         <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
-          <el-button :icon="Bell" @click="openMemoDrawer" plain size="small">备忘</el-button>
+          <el-button :icon="Bell" @click="safeTrigger(openMemoDrawer)" @touchend.prevent="safeTrigger(openMemoDrawer)" plain size="small">备忘</el-button>
         </el-badge>
         <div class="topbar-user">
           <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
@@ -738,7 +747,7 @@ function dueType(memo) {
     <div class="content">
       <div class="toolbar">
         <el-input v-model="keyword" class="search" placeholder="搜索标题、标签或备注" clearable :prefix-icon="Search" />
-        <el-button v-if="canEdit" type="primary" :icon="Plus" @click="openDialog">新增条目</el-button>
+        <el-button v-if="canEdit" type="primary" :icon="Plus" @click="safeTrigger(openDialog)" @touchend.prevent="safeTrigger(openDialog)">新增条目</el-button>
       </div>
 
       <el-row v-if="filtered.length" :gutter="16">
@@ -771,8 +780,8 @@ function dueType(memo) {
             <div class="item-foot">
               <span class="item-date"><el-icon><Calendar /></el-icon>创建 {{ item.date }}</span>
               <div class="foot-actions">
-                <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
-                <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
+                <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="safeTrigger(() => openEditDialog(item))" @touchend.prevent="safeTrigger(() => openEditDialog(item))">编辑</el-button>
+                <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="safeTrigger(() => removeItem(item))" @touchend.prevent="safeTrigger(() => removeItem(item))">删除</el-button>
               </div>
             </div>
           </el-card>
@@ -786,8 +795,8 @@ function dueType(memo) {
             <div class="item-foot">
               <span class="item-date"><el-icon><Calendar /></el-icon>{{ item.date }}</span>
               <div class="foot-actions">
-                <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
-                <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
+                <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="safeTrigger(() => openEditDialog(item))" @touchend.prevent="safeTrigger(() => openEditDialog(item))">编辑</el-button>
+                <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="safeTrigger(() => removeItem(item))" @touchend.prevent="safeTrigger(() => removeItem(item))">删除</el-button>
               </div>
             </div>
           </el-card>
@@ -872,7 +881,7 @@ function dueType(memo) {
         <div class="content">
         <div class="toolbar">
           <el-input v-model="keyword" class="search" placeholder="搜索标题、标签或备注" clearable :prefix-icon="Search" />
-          <el-button v-if="canEdit" type="primary" :icon="Plus" @click="openDialog">新增条目</el-button>
+          <el-button v-if="canEdit" type="primary" :icon="Plus" @click="safeTrigger(openDialog)" @touchend.prevent="safeTrigger(openDialog)">新增条目</el-button>
         </div>
 
         <el-row v-if="filtered.length" :gutter="16">
@@ -905,8 +914,8 @@ function dueType(memo) {
               <div class="item-foot">
                 <span class="item-date"><el-icon><Calendar /></el-icon>创建 {{ item.date }}</span>
                 <div class="foot-actions">
-                  <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
-                  <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
+                  <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="safeTrigger(() => openEditDialog(item))" @touchend.prevent="safeTrigger(() => openEditDialog(item))">编辑</el-button>
+                  <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="safeTrigger(() => removeItem(item))" @touchend.prevent="safeTrigger(() => removeItem(item))">删除</el-button>
                 </div>
               </div>
             </el-card>
@@ -920,8 +929,8 @@ function dueType(memo) {
               <div class="item-foot">
                 <span class="item-date"><el-icon><Calendar /></el-icon>{{ item.date }}</span>
                 <div class="foot-actions">
-                  <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
-                  <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
+                  <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="safeTrigger(() => openEditDialog(item))" @touchend.prevent="safeTrigger(() => openEditDialog(item))">编辑</el-button>
+                  <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="safeTrigger(() => removeItem(item))" @touchend.prevent="safeTrigger(() => removeItem(item))">删除</el-button>
                 </div>
               </div>
             </el-card>
@@ -984,8 +993,8 @@ function dueType(memo) {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button @click="safeTrigger(() => dialogVisible = false)" @touchend.prevent="safeTrigger(() => dialogVisible = false)">取消</el-button>
+        <el-button type="primary" @click="safeTrigger(submit)" @touchend.prevent="safeTrigger(submit)">保存</el-button>
       </template>
     </el-dialog>
 
@@ -996,7 +1005,7 @@ function dueType(memo) {
           <h2>备忘录</h2>
           <p>共 {{ memos.length }} 条 · 待办 {{ upcomingCount }} 条</p>
         </div>
-        <el-button v-if="canEdit" type="primary" :icon="Plus" @click="openAddMemoDialog">新增备忘</el-button>
+        <el-button v-if="canEdit" type="primary" :icon="Plus" @click="safeTrigger(openAddMemoDialog)" @touchend.prevent="safeTrigger(openAddMemoDialog)">新增备忘</el-button>
       </div>
 
       <div class="memo-list">
@@ -1022,8 +1031,8 @@ function dueType(memo) {
             </div>
           </div>
           <div class="memo-actions">
-            <el-button v-if="canEdit" type="primary" size="small" :icon="Edit" @click="openEditMemo(memo)" title="编辑" />
-            <el-button v-if="canEdit" type="danger" size="small" :icon="Delete" @click="removeMemo(memo)" title="删除" />
+            <el-button v-if="canEdit" type="primary" size="small" :icon="Edit" @click="safeTrigger(() => openEditMemo(memo))" @touchend.prevent="safeTrigger(() => openEditMemo(memo))" title="编辑" />
+            <el-button v-if="canEdit" type="danger" size="small" :icon="Delete" @click="safeTrigger(() => removeMemo(memo))" @touchend.prevent="safeTrigger(() => removeMemo(memo))" title="删除" />
           </div>
         </div>
       </div>
