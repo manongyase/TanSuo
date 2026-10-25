@@ -129,7 +129,13 @@ function parseCookie(header) {
 }
 
 function setSessionCookie(headers, sid, maxAgeSec) {
-  const parts = [`${SESSION_COOKIE}=${encodeURIComponent(sid)}`, 'Path=/']
+  const parts = [
+    `${SESSION_COOKIE}=${encodeURIComponent(sid)}`,
+    'Path=/',
+    'SameSite=None',   // 允许跨子域携带 cookie(Vercel Preview vs Production)
+    'Secure',          // HTTPS-only(Vercel 默认 HTTPS)
+    'HttpOnly'         // 不让 JS 读,防 XSS
+  ]
   if (maxAgeSec > 0) parts.push(`Max-Age=${maxAgeSec}`)
   else parts.push('Max-Age=0')
   // Edge Response headers 用 append
