@@ -14,6 +14,10 @@ const AUTH_TTL = 3 * 24 * 60 * 60 * 1000  // 3 天(ms)
 const currentUser = ref(null)   // { username, role }
 const authChecking = ref(true)
 
+// 登录表单
+const loginForm = ref({ username: '', password: '' })
+const loginLoading = ref(false)
+
 function checkAuth() {
   try {
     const raw = localStorage.getItem(AUTH_KEY)
