@@ -1128,9 +1128,8 @@ function dueType(memo) {
       </template>
     </el-dialog>
 
-    <!-- 移动端调试助手 -->
+    <!-- 调试助手(所有设备可见) -->
     <el-button
-      v-if="isMobile"
       class="debug-fab"
       circle
       size="large"
