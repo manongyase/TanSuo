@@ -331,6 +331,23 @@ export default async function handler(req) {
       }
     }
 
+    // /api/debug-users — 调试:直接返回 D1 users 表 + 当前 cookie 解析结果
+    if (pathname.endsWith('/api/debug-users') && method === 'GET') {
+      try {
+        await ensureUsersTable()
+        const allUsers = await d1Query('SELECT username, role FROM users ORDER BY username')
+        const cookie = parseCookie(req.headers.get('cookie'))
+        const sess = verifySession(cookie[SESSION_COOKIE])
+        return new Response(JSON.stringify({
+          usersInD1: allUsers,
+          currentCookieUser: sess,
+          cookieRaw: cookie[SESSION_COOKIE] || null
+        }, null, 2), { headers: { 'Content-Type': 'application/json' } })
+      } catch (e) {
+        return new Response(JSON.stringify({ error: String(e.message || e) }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+      }
+    }
+
     // /api/login — 登录(D1 查 users 表)
     if (pathname.endsWith('/api/login') && method === 'POST') {
       await ensureUsersTable()
