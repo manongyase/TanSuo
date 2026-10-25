@@ -118,8 +118,12 @@ function parseCookie(header) {
   if (!header) return {}
   const out = {}
   header.split(';').forEach(p => {
-    const [k, v] = p.trim().split('=')
-    if (k) out[k] = decodeURIComponent(v || '')
+    const eq = p.indexOf('=')
+    if (eq < 1) return
+    const k = p.slice(0, eq).trim()
+    const v = p.slice(eq + 1).trim()
+    // 浏览器发回的 Cookie 头已经自动 URL 解码过了,不要再 decode!
+    if (k) out[k] = v
   })
   return out
 }

@@ -49,8 +49,11 @@ function checkSession(req) {
 function parseCookie(header) {
   const out = {}
   header.split(';').forEach(p => {
-    const [k, v] = p.trim().split('=')
-    if (k) out[k] = decodeURIComponent(v || '')
+    const eq = p.indexOf('=')
+    if (eq < 1) return
+    const k = p.slice(0, eq).trim()
+    const v = p.slice(eq + 1).trim()
+    if (k) out[k] = v  // 浏览器已自动 URL 解码,别再 decode!
   })
   return out
 }
