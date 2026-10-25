@@ -7,61 +7,55 @@ import api, { pingDb, fetchAllItems, fetchAllMemos, saveItems, saveMemos, remove
 
 const NEXT_STATUS = { todo: 'doing', doing: 'done', done: 'todo' }
 
-// ---------- 鉴权系统 ----------
-const AUTH_KEY = 'tansuo-web-auth'
-const AUTH_EXPIRE_MS = 3 * 24 * 60 * 60 * 1000  // 3 天
-
-const USERS = [
-  { username: 'admin',   password: '宇宙之疯牛倜傥', role: 'admin'   },
-  { username: '张文秀',  password: '张文秀',        role: 'viewer' }
-]
-
+// ---------- 鉴权系统(纯后端 API + cookie) ----------
 const currentUser = ref(null)   // { username, role }
+const authChecking = ref(true)  // 首次加载时正在验证 cookie
 
 // 登录表单
 const loginForm = ref({ username: '', password: '' })
 const loginLoading = ref(false)
 
-function checkAuth() {
+async function checkAuth() {
+  authChecking.value = true
   try {
-    const raw = localStorage.getItem(AUTH_KEY)
-    if (!raw) return false
-    const data = JSON.parse(raw)
-    if (!data.username || !data.role || !data.expireAt) return false
-    if (Date.now() > data.expireAt) {
-      localStorage.removeItem(AUTH_KEY)
-      return false
+    const res = await fetch('/api/me', { credentials: 'include' })
+    if (res.ok) {
+      const data = await res.json()
+      currentUser.value = { username: data.username, role: data.role }
+      return true
     }
-    currentUser.value = { username: data.username, role: data.role }
-    return true
-  } catch { return false }
+  } catch { /* 后端离线或无 cookie */ }
+  currentUser.value = null
+  authChecking.value = false
+  return false
 }
 
 async function doLogin() {
   loginLoading.value = true
-  const u = loginForm.value.username.trim()
-  const p = loginForm.value.password
-  const found = USERS.find(x => x.username === u && x.password === p)
-  loginLoading.value = false
-  if (!found) {
-    ElMessage.error('用户名或密码不对')
-    return
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username: loginForm.value.username.trim(), password: loginForm.value.password })
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      ElMessage.error(err.error || '登录失败')
+      return
+    }
+    const data = await res.json()
+    currentUser.value = { username: data.username, role: data.role }
+    ElMessage.success('登录成功')
+    await initializeFromBackend()
+    await refreshDbBar()
+  } finally {
+    loginLoading.value = false
   }
-  const data = {
-    username: found.username,
-    role: found.role,
-    expireAt: Date.now() + AUTH_EXPIRE_MS
-  }
-  localStorage.setItem(AUTH_KEY, JSON.stringify(data))
-  currentUser.value = { username: found.username, role: found.role }
-  ElMessage.success('登录成功')
-  // 登录后立即连接后端 + 拉数据
-  await initializeFromBackend()
-  await refreshDbBar()
 }
 
-function doLogout() {
-  localStorage.removeItem(AUTH_KEY)
+async function doLogout() {
+  try { await fetch('/api/logout', { method: 'POST', credentials: 'include' }) } catch {}
   currentUser.value = null
   dbConnected.value = false
 }

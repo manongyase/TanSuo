@@ -57,6 +57,107 @@ async function d1Query(sql, params = []) {
   return []
 }
 
+// ---------- 鉴权相关 ----------
+const SESSION_COOKIE = 'tansuo_session'
+const SESSION_TTL_SEC = 3 * 24 * 60 * 60  // 3 天
+
+// Edge Runtime 原生 crypto.subtle
+async function hashPassword(pw) {
+  const buf = new TextEncoder().encode(pw)
+  const hash = await crypto.subtle.digest('SHA-256', buf)
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+// Edge Runtime 无状态:cookie 存 base64(JSON + 过期) + HMAC-SHA256 签名
+// 用 CLOUDFLARE_API_TOKEN 当密钥(够长、够随机)
+function getSessionSecret() {
+  return process.env.SESSION_SECRET || process.env.CLOUDFLARE_API_TOKEN || 'dev-secret-change-me'
+}
+
+async function hmacSign(data) {
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(getSessionSecret()),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data))
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function hmacVerify(data, sig) {
+  const expected = await hmacSign(data)
+  const a = expected.toLowerCase(), b = sig.toLowerCase()
+  if (a.length !== b.length) return false
+  let v = 0
+  for (let i = 0; i < a.length; i++) v |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return v === 0
+}
+
+async function signSession(username, role) {
+  const expireAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SEC
+  const payload = JSON.stringify({ u: username, r: role, e: expireAt })
+  const sig = await hmacSign(payload)
+  return btoa(payload + '.' + sig)
+}
+
+async function verifySession(sid) {
+  if (!sid) return null
+  try {
+    const decoded = atob(sid)
+    const [payload, sig] = decoded.split('.')
+    if (!payload || !sig) return null
+    if (!await hmacVerify(payload, sig)) return null
+    const obj = JSON.parse(payload)
+    if (!obj.u || !obj.r || !obj.e) return null
+    if (Math.floor(Date.now() / 1000) > obj.e) return null
+    return { username: obj.u, role: obj.r }
+  } catch { return null }
+}
+
+function parseCookie(header) {
+  if (!header) return {}
+  const out = {}
+  header.split(';').forEach(p => {
+    const [k, v] = p.trim().split('=')
+    if (k) out[k] = decodeURIComponent(v || '')
+  })
+  return out
+}
+
+function setSessionCookie(headers, sid, maxAgeSec) {
+  const parts = [`${SESSION_COOKIE}=${encodeURIComponent(sid)}`, 'Path=/']
+  if (maxAgeSec > 0) parts.push(`Max-Age=${maxAgeSec}`)
+  else parts.push('Max-Age=0')
+  // Edge Response headers 用 append
+  if (headers.append) headers.append('Set-Cookie', parts.join('; '))
+  else headers['Set-Cookie'] = parts.join('; ')
+}
+
+// users 表是否已建 + 种子用户是否已插入
+let usersInitialized = false
+async function ensureUsersTable() {
+  if (usersInitialized) return
+  await d1Execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      username TEXT PRIMARY KEY,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'viewer',
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `)
+  // 检查是否已存在
+  const rows = await d1Query('SELECT COUNT(*) AS c FROM users')
+  if (!rows.length || rows[0].c === 0) {
+    const adminHash = await hashPassword('宇宙之疯牛倜傥')
+    const xwHash = await hashPassword('张文秀')
+    await d1Batch([
+      { sql: 'INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)', params: ['admin', adminHash, 'admin'] },
+      { sql: 'INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)', params: ['张文秀', xwHash, 'viewer'] }
+    ])
+  }
+  usersInitialized = true
+}
+
 // 返回 D1 REST API 的完整原始响应（调试用）
 async function d1RawFetch(path, body) {
   const { accountId, dbId, token } = getCreds()
@@ -219,18 +320,55 @@ export default async function handler(req) {
         }
         if (hasCreds) {
           try {
-            const itemCount = await d1QueryScalar('SELECT COUNT(*) FROM items')
-            const memoCount = await d1QueryScalar('SELECT COUNT(*) FROM memos')
-            info.itemsInDb = itemCount
-            info.memosInDb = memoCount
-            const sample = await d1Query('SELECT id, module_key, title FROM items LIMIT 3')
-            info.sampleItems = sample
+            await ensureUsersTable()
+            info.usersInited = true
           } catch (e) {
-            info.dbQueryError = String(e.message || e)
+            info.usersInited = false
+            info.usersInitError = String(e.message || e)
           }
         }
-        return json(info)
+        return new Response(JSON.stringify(info), { headers: { 'Content-Type': 'application/json' } })
       }
+    }
+
+    // /api/login — 登录(D1 查 users 表)
+    if (pathname.endsWith('/api/login') && method === 'POST') {
+      await ensureUsersTable()
+      const body = await req.json()
+      const u = String(body.username || '').trim()
+      const p = String(body.password || '')
+      const hash = await hashPassword(p)
+      const rows = await d1Query(
+        'SELECT username, role FROM users WHERE username = ? AND password_hash = ?',
+        [u, hash]
+      )
+      if (!rows.length) {
+        return new Response(JSON.stringify({ ok: false, error: '用户名或密码不对' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+      }
+      const user = rows[0]
+      // Edge Runtime session 用 cookie,但没有内存存储(Vercel Edge 无状态)
+      // 简化:cookie 里存直接用户信息 + 过期时间,用签名校验
+      const sid = await signSession(user.username, user.role)
+      const headers = new Headers({ 'Content-Type': 'application/json' })
+      setSessionCookie(headers, sid, SESSION_TTL_SEC)
+      return new Response(JSON.stringify({ ok: true, username: user.username, role: user.role }), { headers })
+    }
+
+    // /api/me — 验证登录状态
+    if (pathname.endsWith('/api/me') && method === 'GET') {
+      const cookie = parseCookie(req.headers.get('cookie'))
+      const sess = verifySession(cookie[SESSION_COOKIE])
+      if (!sess) {
+        return new Response(JSON.stringify({ ok: false, error: '未登录' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({ ok: true, username: sess.username, role: sess.role }), { headers: { 'Content-Type': 'application/json' } })
+    }
+
+    // /api/logout — 登出
+    if (pathname.endsWith('/api/logout') && method === 'POST') {
+      const headers = new Headers({ 'Content-Type': 'application/json' })
+      setSessionCookie(headers, '', 0)
+      return new Response(JSON.stringify({ ok: true }), { headers })
     }
 
     // /api/items/raw — 返回 D1 REST API 原始响应（调试用）

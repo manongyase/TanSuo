@@ -13,13 +13,46 @@ import {
   deleteMemo,
   clearMemos,
   clearItems,
-  DB_FILE
+  DB_FILE,
+  login as dbLogin,
+  getUser
 } from './db.js'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type'
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Credentials': 'true'
+}
+
+const SESSION_COOKIE = 'tansuo_session'
+const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000  // 3 天
+const sessions = new Map()  // sessionId → { username, role, expireAt }
+
+function makeSession(user) {
+  const id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
+  sessions.set(id, { username: user.username, role: user.role, expireAt: Date.now() + SESSION_TTL_MS })
+  return id
+}
+
+function checkSession(req) {
+  const cookie = parseCookie(req.headers.cookie || '')
+  const sess = sessions.get(cookie[SESSION_COOKIE])
+  if (!sess) return null
+  if (sess.expireAt < Date.now()) {
+    sessions.delete(cookie[SESSION_COOKIE])
+    return null
+  }
+  return { username: sess.username, role: sess.role }
+}
+
+function parseCookie(header) {
+  const out = {}
+  header.split(';').forEach(p => {
+    const [k, v] = p.trim().split('=')
+    if (k) out[k] = decodeURIComponent(v || '')
+  })
+  return out
 }
 
 function send(res, code, obj) {
@@ -62,6 +95,46 @@ export async function registerApi(server) {
     // ---------- /api/health ----------
     if (p === '/api/health' && req.method === 'GET') {
       return send(res, 200, { ok: true, db: DB_FILE })
+    }
+
+    // ---------- /api/login ----------
+    if (p === '/api/login' && req.method === 'POST') {
+      try {
+        const body = await readBody(req)
+        if (!body) return send(res, 400, { error: 'invalid json' })
+        const u = String(body.username || '').trim()
+        const p = String(body.password || '')
+        const user = dbLogin(u, p)
+        if (!user) return send(res, 401, { error: '用户名或密码不对' })
+        const sid = makeSession(user)
+        setCookie(res, SESSION_COOKIE, sid, SESSION_TTL_MS)
+        return send(res, 200, { ok: true, username: user.username, role: user.role })
+      } catch (e) {
+        return send(res, 500, { error: String(e.message || e) })
+      }
+    }
+
+    // ---------- /api/me ----------
+    if (p === '/api/me' && req.method === 'GET') {
+      const user = checkSession(req)
+      if (!user) return send(res, 401, { error: '未登录' })
+      return send(res, 200, { ok: true, username: user.username, role: user.role })
+    }
+
+    // ---------- /api/logout ----------
+    if (p === '/api/logout' && req.method === 'POST') {
+      const cookie = parseCookie(req.headers.cookie || '')
+      sessions.delete(cookie[SESSION_COOKIE])
+      setCookie(res, SESSION_COOKIE, '', 0)
+      return send(res, 200, { ok: true })
+    }
+
+    // ---------- 鉴权辅助:写操作需要 admin ----------
+    function requireAdmin(req) {
+      const u = checkSession(req)
+      if (!u) return { ok: false, code: 401, msg: '未登录' }
+      if (u.role !== 'admin') return { ok: false, code: 403, msg: '没有权限' }
+      return { ok: true, user: u }
     }
 
     // ---------- /api/items/clear ----------
@@ -252,4 +325,12 @@ function toMemoResp(r) {
     pinned: !!r.pinned,
     done: !!r.done
   }
+}
+
+function setCookie(res, name, value, maxAgeMs) {
+  const parts = [`${name}=${encodeURIComponent(value)}`]
+  parts.push(`Path=/`)
+  if (maxAgeMs > 0) parts.push(`Max-Age=${Math.floor(maxAgeMs / 1000)}`)
+  else parts.push(`Max-Age=0`)
+  res.setHeader('Set-Cookie', parts.join('; '))
 }

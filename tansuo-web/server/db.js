@@ -4,6 +4,7 @@
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
+import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 
@@ -53,7 +54,49 @@ function init(db) {
       pinned INTEGER DEFAULT 0,
       done INTEGER DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      username TEXT PRIMARY KEY,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'viewer',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `)
+
+  // 种子用户:首次启动自动创建
+  seedUsers(db)
+}
+
+// ---------- 用户相关 ----------
+function hashPassword(pw) {
+  return crypto.createHash('sha256').update(pw).digest('hex')
+}
+
+function seedUsers(db) {
+  const count = db.prepare('SELECT COUNT(*) AS c FROM users').get().c
+  if (count > 0) return  // 已有用户,不再插入
+
+  const insert = db.prepare(
+    'INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)'
+  )
+  const tx = db.transaction(() => {
+    insert.run('admin',  hashPassword('宇宙之疯牛倜傥'), 'admin')
+    insert.run('张文秀', hashPassword('张文秀'),        'viewer')
+  })
+  tx()
+}
+
+export function login(username, password) {
+  const db = getDb()
+  const row = db.prepare(
+    'SELECT username, role FROM users WHERE username = ? AND password_hash = ?'
+  ).get(username, hashPassword(password))
+  return row || null
+}
+
+export function getUser(username) {
+  const db = getDb()
+  return db.prepare('SELECT username, role FROM users WHERE username = ?').get(username) || null
 }
 
 // ---------- Items ----------
