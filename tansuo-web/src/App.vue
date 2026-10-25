@@ -660,14 +660,13 @@ function dueType(memo) {
       <p class="login-sub">输入用户名和密码进入</p>
       <el-form :model="loginForm" label-position="top" @submit.prevent="doLogin">
         <el-form-item label="用户名">
-          <el-input v-model="loginForm.username" :prefix-icon="User" placeholder="admin 或 张文秀" autocomplete="username" />
+          <el-input v-model="loginForm.username" :prefix-icon="User" placeholder="请输入用户名" autocomplete="username" />
         </el-form-item>
         <el-form-item label="密码">
           <el-input v-model="loginForm.password" :prefix-icon="Lock" type="password" show-password placeholder="请输入密码" autocomplete="current-password" @keyup.enter="doLogin" />
         </el-form-item>
         <el-button type="primary" :loading="loginLoading" class="login-btn" @click="doLogin">登 录</el-button>
       </el-form>
-      <p class="login-tip">管理员可增删改 · 只读账号仅查看</p>
     </div>
   </div>
 

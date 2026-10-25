@@ -128,7 +128,7 @@ export const MODULES = [
     name: '规划',
     subtitle: '长线目标，一步步靠近',
     desc: '有截止日、有目标值的事，让进度看得见、时间也看得见。',
-    icon: 'Target',
+    icon: 'Aim',
     color: '#51cf66',
     items: [
       {
