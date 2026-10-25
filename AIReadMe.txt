@@ -447,4 +447,205 @@
   ├── vite.config.js                 ← 本地 5173,挂 server/api.js
   └── vercel.json                    ← rewrites /api/* → /api/handler
 
+═══════════════════════════════════════
+ 【十六、2026-10-25 会话实战记录 · 移动端弹窗修复】
+═══════════════════════════════════════
+
+  日期:2026-10-25
+  目标:修复移动端按钮点击无弹窗 + 桌面端备忘按钮缺失 + safeTrigger/touchend 清理
+  最终状态:✅ 全部修复,双仓库推送
+  提交: TanSuo 9976c6f, WebPage 56e2ae3
+
+  ┌─────────────────────────────────────────────┐
+  │  一、原始 Bug 根因                          │
+  └─────────────────────────────────────────────┘
+
+  Bug #1: 移动端所有"新增/编辑/备忘/调试"按钮点了没反应
+    → 根因:<el-dialog>/<el-drawer>写在 <div v-else class="desktop-root"> 内部
+             移动端走 v-if 分支,desktop-root 不渲染
+             → dialog 组件根本不在 DOM 里,openDialog() 设 dialogVisible=true 没用
+             → browser_evaluate 确认:dialogInHTML=false,drawerInHTML=false
+
+  Bug #2: 桌面端没有备忘按钮
+    → 根因:mobile-app 的 topbar 有备忘按钮(line 778),desktop-root 的 topbar 没有
+             desktop-root head-right 只有:DB标签 + 用户头像 + 登出
+             移动端有:DB标签 + Bell备忘 + 用户头像 + 登出
+
+  Bug #3: 所有按钮用 safeTrigger + @touchend.prevent 双绑定
+    → safeTrigger(fn) 只做 300ms 防抖,其实没必要
+    → @touchend.prevent 在某些移动浏览器里会吞掉 click 事件
+    → 代码里到处都是:@click="safeTrigger(openDialog)" @touchend.prevent="safeTrigger(openDialog)"
+
+  ┌─────────────────────────────────────────────┐
+  │  二、我踩过的坑(必须记住)                    │
+  └─────────────────────────────────────────────┘
+
+  坑 #1: wsl -e bash -c 找不到 node
+    现象:node command not found / bash: line 1: node: command not found
+    根因:wsl -e bash -c 启动的是**非交互 shell**,不加载 .bashrc/.nvm
+    用户纠正:"wsl里面有node啊,front@DESKTOP-AUTD1J5:~/scripts$ node → v24.22.1"
+    正确写法:
+      ✅ wsl -u front -e bash -ic 'which node'
+      ✅ wsl -u root -e bash -c 'cd /mnt/f/TanSuo/tansuo-web && /home/front/.nvm/versions/node/v24.22.1/bin/node node_modules/vite/bin/vite.js'
+    经验:wsl 里跑 npm/vite 必须显式指定 nvm 里的 node 绝对路径
+
+  坑 #2: WSL 里 npm install 报 EPERM (Operation was rejected)
+    现象:npm install → EPERM: operation not permitted, chmod ...babel-parser...
+    根因:/mnt/f/ 挂载盘上 WSL 用户权限不够(Windows 侧 owner,Linux 侧不认)
+    解决:用 root 用户跑 npm install
+      wsl -u root -e bash -c 'cd /mnt/f/TanSuo/tansuo-web && npm install'
+    注意:root 装完 node_modules 里的脚本有 CRLF 问题(Windows 挂载特性)
+
+  坑 #3: node_modules/.bin/vite 有 CRLF,/usr/bin/env: 'bash\r': No such file
+    现象:vite.js 脚本首行是 #!/usr/bin/env node\r,Linux 不认
+    解决:直接用绝对路径 node 跳过 shebang
+      ✅ /home/front/.nvm/versions/node/v24.22.1/bin/node node_modules/vite/bin/vite.js --host 0.0.0.0
+    备选:find node_modules/.bin -type f -exec sed -i 's/\r$//' {} +
+
+  坑 #4: PowerShell Set-Content 把文件搞成一行了!
+    现象:想删除文件中间几行,用 PowerShell 数组切片 + Set-Content → 整个文件变成一行
+    根因:Get-Content 读成数组但 Set-Content 默认编码/换行符处理有问题
+    解决:立刻 git checkout -- tansuo-web/src/App.vue 恢复
+    铁律:改 Vue 模板文件**只用 Edit 工具(old_string/new_string)**,别用 PowerShell 批量操作
+
+  坑 #5: Vue 编译错误 "v-else has no adjacent v-if"
+    第一次:我在 v-if 和 v-else 之间加了 dialog 块 → Vue 要求 v-if/v-else 必须是兄弟节点
+    第二次:我删掉 dialog 块后,中间留了空行和注释 → **空行也会导致!**
+    铁律:v-if 闭合 `</div>` 和 v-else 开启 `<div v-else>` 之间**不能有任何东西**
+      ✅ </div>\n  <div v-else>
+      ❌ </div>\n\n  <div v-else>  (空行)
+      ❌ </div>\n  <!-- 注释 -->\n  <div v-else>  (注释)
+
+  坑 #6: safeTrigger(() => func()) 正则没匹配上
+    现象:PowerShell regex `safeTrigger\(\(\)\s*=>\s*([^)]+)\)` 没匹配嵌套括号
+    根因:openEditDialog(item) 里有括号,regex 只匹配到第一个 `)`
+    解决:用更宽松的 `safeTrigger\(\(\)\s*=>\s*([a-zA-Z_][a-zA-Z0-9_]*\([^)]*\))\)`
+
+  坑 #7: 想搞 Vant4 + Element Plus 双框架
+    我建议给移动端单独上 Vant4,被 Advisor 拦了
+    Advisor 说得对:这是杀鸡用牛刀,问题出在模板结构不是 UI 框架
+    铁律:遇到 bug 先定位根因,不要急着换框架/加新依赖
+
+  坑 #8: 忘了"不影响原桌面功能"
+    用户提醒:"老铁,要不咱们分成两套框架,PC用这套可以,但是安卓用 Vant4"
+    背后隐含:之前的改动可能影响了桌面端!
+    铁律:任何改动前先明确范围——只动什么,不动什么
+
+  ┌─────────────────────────────────────────────┐
+  │  三、正确修复步骤(下次照抄)                  │
+  └─────────────────────────────────────────────┘
+
+  Step 1: 确认原始状态
+    cd f:\TanSuo; git --no-pager log --oneline -3
+
+  Step 2: 跑 dev server
+    wsl -u root -e bash -c 'cd /mnt/f/TanSuo/tansuo-web && /home/front/.nvm/versions/node/v24.22.1/bin/node node_modules/vite/bin/vite.js --host 0.0.0.0'
+
+  Step 3: 浏览器测试
+    - browser_evaluate 查 dialog 是否在 DOM 里
+    - browser_snapshot 拿 ref → browser_click 点按钮
+
+  Step 4: 模板修复(两个 Edit)
+    Edit A: mobile-app </div> 后直接接 <div v-else>desktop-root
+            (中间零空行零注释)
+    Edit B: 所有 el-dialog/el-drawer/debug-fab 从 desktop-root 内部移到外面
+
+  Step 5: 业务修复 -- 桌面端补备忘按钮
+    在 desktop-root head-right 的 DB 标签后加:
+      <el-button :icon="Bell" @click="openMemoDrawer" plain size="small" title="备忘录">备忘</el-button>
+
+  Step 6: 清理 -- 全量删除 safeTrigger + @touchend.prevent
+    - safeTrigger(fn) + @touchend.prevent → 纯 @click="fn"
+    - safeTrigger(() => func()) + @touchend.prevent → 纯 @click="func()"
+    - safeTrigger(() => func(item)) + @touchend.prevent → 纯 @click="() => func(item)"
+    - 删除 safeTrigger 函数和 _lastTrigger 变量
+
+  Step 7: 浏览器验证
+    - 新增条目 → 弹窗 "新增 · [模块名]"
+    - 编辑 → 弹窗 "编辑 · [模块名]"
+    - 备忘 → el-drawer slide 出来
+    - debug-fab → 调试助手弹窗
+
+  Step 8: 双仓库同步
+    cd f:\TanSuo
+    git add tansuo-web/src/App.vue; git commit -m "fix: 描述"
+    git -c http.sslVerify=false push origin master
+    Copy-Item "f:\TanSuo\tansuo-web\src\App.vue" "D:\前端_页面\tansuo-web\src\App.vue" -Force
+    cd "D:\前端_页面"
+    git add tansuo-web/src/App.vue; git commit -m "fix: 描述"
+    git -c http.sslVerify=false push origin main
+
+  ┌─────────────────────────────────────────────┐
+  │  四、关键思想沉淀                            │
+  └─────────────────────────────────────────────┘
+
+  思想 #1: 模板条件渲染中的"作用域陷阱"
+    Vue 的 v-if/v-else-if/v-else 是排他渲染,只渲染一个分支
+    但初学者容易把"全局组件"(dialog/drawer/overlay)放进某个分支里
+    → 应该放在 v-if/v-else 的父级 template 里,不受条件分支影响
+    → Element Plus 的 dialog 本身就是 teleport 到 body 的,放哪个 div 里都一样渲染
+
+  思想 #2: v-if/v-else 的相邻约束
+    Vue 编译器要求 v-if 和 v-else 是**直接兄弟节点**
+    中间不能有:空行、HTML注释、任何其他元素
+    这不是警告是编译错误
+    解决:把条件分支尽量包裹在一个容器里,全局组件放容器外
+
+  思想 #3: safeTrigger/@touchend.prevent 是反模式
+    当初为了"移动端 300ms 延迟"加的,但实际上:
+    - 现代浏览器已无 300ms 延迟(除了老旧 Android WebView)
+    - @touchend.prevent 会吞掉 click,导致按钮点不动
+    - 双重事件绑定在某些设备上触发两次
+    结论:纯 @click = fn() 就够了
+
+  思想 #4: PowerShell 不适合改 Vue 模板
+    PowerShell 的编码/换行符/Set-Content 都会搞坏文件
+    改模板文件:只用 Edit 工具(old_string → new_string)
+    改脚本逻辑:Shell + .NET 函数(UTF8 + 不添加 BOM)
+
+  思想 #5: 调试的最快路径
+    1. 跑 dev server
+    2. curl http://localhost:5173/src/App.vue | Select-String "Pre-transform" → 确认编译通过
+    3. 浏览器 evaluate 查 DOM 状态
+    4. 对比代码:代码里有什么 vs DOM 里有什么
+    5. 差在哪?→ 模板结构!
+
+  ┌─────────────────────────────────────────────┐
+  │  五、关键命令速查                            │
+  └─────────────────────────────────────────────┘
+
+  # 启动 dev server(WSL)
+  wsl -u root -e bash -c 'cd /mnt/f/TanSuo/tansuo-web && /home/front/.nvm/versions/node/v24.22.1/bin/node node_modules/vite/bin/vite.js --host 0.0.0.0'
+
+  # 验证编译
+  curl.exe -s "http://localhost:5173/src/App.vue" | Select-String "Pre-transform"
+
+  # 查看端口占用
+  netstat -ano | findstr ":5173" | findstr LISTENING
+
+  # 杀掉 vite
+  wsl -u root -e bash -c 'pkill -f vite'
+
+  # 双仓库 git push(SSL 有问题时)
+  git -c http.sslVerify=false push origin master
+
+  ┌─────────────────────────────────────────────┐
+  │  六、会话时间线                              │
+  └─────────────────────────────────────────────┘
+
+  15:00  会话开始 → 用户上传截图,反馈移动端按钮点不动
+  15:05  确认 dev server 跑着 → 浏览器模拟移动端 → 弹窗不出
+  15:10  发现根因:dialog 在 v-else 分支里,mobile 分支不渲染
+  15:15  第一次修复:Edit 把 dialog 块移到 wrapper 外 → Vue 编译错误
+  15:20  PowerShell Set-Content 把文件搞成一行 → git checkout 恢复
+  15:25  第二次修复:两步 Edit 成功 → 弹窗验证通过
+  15:30  同步 WebPage 仓库 → TanSuo 89a7f5a → WebPage 83dc3cf
+  15:35  用户反馈桌面端三个问题(备忘按钮/左下角偏移/debug-fab)
+  15:40  发现 desktop-root 根本没备忘按钮 + safeTrigger 还在(git restore 恢复了旧代码!)
+  15:45  批量清理 safeTrigger + 补备忘按钮 → 编译错误又来了(空行在 v-if/v-else 之间)
+  15:50  删掉 v-if/v-else 之间的空行 → 零编译错误
+  15:55  浏览器全量验证通过
+  16:00  TanSuo 9976c6f → WebPage 56e2ae3
+  16:05  写本总结
+
 ========================================
