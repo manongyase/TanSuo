@@ -1,8 +1,54 @@
 <script setup>
-import { computed, ref, watch, onMounted, nextTick } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton } from '@element-plus/icons-vue'
+import { Search, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton, QuestionFilled } from '@element-plus/icons-vue'
 import { MODULES, STATUS_MAP, STORAGE_KEY, MEMO_STORAGE_KEY, DEFAULT_MEMOS } from './modules'
+
+// ====== 移动端调试助手 ======
+const debugLogs = ref([])
+const debugOpen = ref(false)
+const isMobile = ref(false)
+function checkMobile() { isMobile.value = window.innerWidth < 768 }
+checkMobile()
+window.addEventListener('resize', checkMobile)
+onBeforeUnmount(() => window.removeEventListener('resize', checkMobile))
+
+// 劫持 console,收集所有日志
+const _origConsole = { log: console.log, warn: console.warn, error: console.error }
+function _capture(level, args) {
+  const line = `[${new Date().toLocaleTimeString()}] [${level}] ${args.map(a => {
+    if (typeof a === 'object') try { return JSON.stringify(a) } catch { return String(a) }
+    return String(a)
+  }).join(' ')}`
+  debugLogs.value.push(line)
+  if (debugLogs.value.length > 200) debugLogs.value.shift()
+}
+console.log = (...a) => { _capture('log', a); _origConsole.log.apply(console, a) }
+console.warn = (...a) => { _capture('warn', a); _origConsole.warn.apply(console, a) }
+console.error = (...a) => { _capture('error', a); _origConsole.error.apply(console, a) }
+
+function _copyDebug() {
+  const info = [
+    '=== TanSuo Debug ===',
+    `Time: ${new Date().toISOString()}`,
+    `UA: ${navigator.userAgent}`,
+    `Mobile: ${isMobile.value}`,
+    `Width: ${window.innerWidth}px`,
+    `Role: ${currentUser.value?.role || 'null'}`,
+    `User: ${currentUser.value?.username || 'null'}`,
+    `DB: ${dbConnected.value}`,
+    `Tab: ${activeKey.value}`,
+    `Items: ${Object.values(items.value).flat().length}`,
+    `Memos: ${memos.value.length}`,
+    `LocalStorage keys: ${Object.keys(localStorage).join(', ')}`,
+    '',
+    '=== Console ===',
+    ...debugLogs.value
+  ].join('\n')
+  navigator.clipboard?.writeText(info)
+  ElMessage.success('Debug 信息已复制,粘贴发给 AI 就行')
+  debugOpen.value = false
+}
 import api, { pingDb, fetchAllItems, fetchAllMemos, saveItems, saveMemos, removeItem as removeItemFromApi, removeMemo as removeMemoFromApi, migrateFromLocalStorage, dbStats } from './api.js'
 
 const NEXT_STATUS = { todo: 'doing', doing: 'done', done: 'todo' }
@@ -1086,6 +1132,69 @@ function dueType(memo) {
         <el-button type="primary" @click="doMigrate('replace')">全部替换</el-button>
       </template>
     </el-dialog>
+
+    <!-- 移动端调试助手 -->
+    <el-button
+      v-if="isMobile"
+      class="debug-fab"
+      circle
+      size="large"
+      :icon="QuestionFilled"
+      @click="debugOpen = true"
+    />
+    <el-dialog v-model="debugOpen" title="🛠 调试助手" width="min(520px, 92%)" top="5vh">
+      <div class="debug-panel">
+        <p class="debug-hint">下面是收集到的 debug 信息,全选 → 复制 → 发给 AI 就行</p>
+        <textarea readonly class="debug-textarea">{{ [
+          '=== TanSuo Debug ===',
+          'Time: ' + new Date().toISOString(),
+          'UA: ' + navigator.userAgent,
+          'Mobile: ' + isMobile.value,
+          'Width: ' + window.innerWidth + 'px',
+          'Role: ' + (currentUser.value?.role || 'null'),
+          'User: ' + (currentUser.value?.username || 'null'),
+          'DB: ' + dbConnected.value,
+          'Tab: ' + activeKey.value,
+          'Items: ' + Object.values(items.value).flat().length,
+          'Memos: ' + memos.value.length,
+          'LocalStorage: ' + Object.keys(localStorage).join(', '),
+          '',
+          '=== Console (' + debugLogs.length + '条) ===',
+          ...debugLogs.value.slice(-100)
+        ].join('\n') }}</textarea>
+      </div>
+      <template #footer>
+        <el-button @click="debugOpen = false">关闭</el-button>
+        <el-button type="primary" @click="_copyDebug">一键复制</el-button>
+      </template>
+    </el-dialog>
   </div>
   </template>
 </template>
+
+<style scoped>
+.debug-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 24px;
+  z-index: 9999;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(99,102,241,.4);
+  width: 48px;
+  height: 48px;
+}
+.debug-panel .debug-hint { margin: 0 0 10px; font-size: 13px; color: #666; }
+.debug-textarea {
+  width: 100%;
+  height: 300px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  resize: vertical;
+  color: #111;
+}
+</style>
