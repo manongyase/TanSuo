@@ -322,22 +322,11 @@ body {
   overflow: visible;
 }
 
-/* 移动端优化：放大卡片底部按钮的点击区域 */
+/* foot-actions 按钮间距(移动端普通按钮) */
 .foot-actions {
   display: flex;
-  gap: 4px;
-}
-.foot-actions .el-button {
-  min-height: 36px;
-  padding: 8px 14px;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* 全局 touch 优化 */
-.item-card, .el-button, .el-tag {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .item-head {

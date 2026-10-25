@@ -771,8 +771,8 @@ function dueType(memo) {
             <div class="item-foot">
               <span class="item-date"><el-icon><Calendar /></el-icon>创建 {{ item.date }}</span>
               <div class="foot-actions">
-                <el-button link type="primary" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
-                <el-button link type="danger" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
+                <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
+                <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
               </div>
             </div>
           </el-card>
@@ -786,8 +786,8 @@ function dueType(memo) {
             <div class="item-foot">
               <span class="item-date"><el-icon><Calendar /></el-icon>{{ item.date }}</span>
               <div class="foot-actions">
-                <el-button link type="primary" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
-                <el-button link type="danger" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
+                <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
+                <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
               </div>
             </div>
           </el-card>
@@ -831,7 +831,7 @@ function dueType(memo) {
             <span v-else>后端离线</span>
           </div>
           <div class="foot-actions">
-            <el-button link type="primary" size="small" :loading="checkingDb" @click="checkDbIntegrity">🔍 检查</el-button>
+            <el-button type="primary" size="small" :loading="checkingDb" @click="checkDbIntegrity">🔍 检查</el-button>
             <el-button link type="success" size="small" v-if="canEdit" :loading="syncingDb" @click="manualSyncToDb">💾 同步</el-button>
           </div>
         </div>
@@ -905,8 +905,8 @@ function dueType(memo) {
               <div class="item-foot">
                 <span class="item-date"><el-icon><Calendar /></el-icon>创建 {{ item.date }}</span>
                 <div class="foot-actions">
-                  <el-button link type="primary" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
-                  <el-button link type="danger" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
+                  <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
+                  <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
                 </div>
               </div>
             </el-card>
@@ -920,8 +920,8 @@ function dueType(memo) {
               <div class="item-foot">
                 <span class="item-date"><el-icon><Calendar /></el-icon>{{ item.date }}</span>
                 <div class="foot-actions">
-                  <el-button link type="primary" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
-                  <el-button link type="danger" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
+                  <el-button type="primary" size="small" :icon="Edit" v-if="canEdit" @click="openEditDialog(item)">编辑</el-button>
+                  <el-button type="danger" size="small" :icon="Delete" v-if="canEdit" @click="removeItem(item)">删除</el-button>
                 </div>
               </div>
             </el-card>
@@ -1022,8 +1022,8 @@ function dueType(memo) {
             </div>
           </div>
           <div class="memo-actions">
-            <el-button v-if="canEdit" link type="primary" :icon="Edit" @click="openEditMemo(memo)" title="编辑" />
-            <el-button v-if="canEdit" link type="danger" :icon="Delete" @click="removeMemo(memo)" title="删除" />
+            <el-button v-if="canEdit" type="primary" size="small" :icon="Edit" @click="openEditMemo(memo)" title="编辑" />
+            <el-button v-if="canEdit" type="danger" size="small" :icon="Delete" @click="removeMemo(memo)" title="删除" />
           </div>
         </div>
       </div>
