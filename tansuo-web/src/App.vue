@@ -932,7 +932,7 @@ function dueType(memo) {
       </div>  <!-- /main-wrap -->
     </el-container>  <!-- /desktop-layout -->
 
-    <el-dialog v-model="dialogVisible" :title="editingId ? `编辑 · ${current.name}` : `新增 · ${current.name}`" width="520px">
+    <el-dialog v-model="dialogVisible" :title="editingId ? `编辑 · ${current.name}` : `新增 · ${current.name}`" width="min(520px, 92%)" top="5vh">
       <el-form :model="form" label-position="top">
         <el-form-item label="标题" required>
           <el-input v-model="form.title" placeholder="要记下什么？" maxlength="40" show-word-limit />
@@ -990,7 +990,7 @@ function dueType(memo) {
     </el-dialog>
 
     <!-- 备忘录抽屉 -->
-    <el-drawer v-model="memoDrawer" title="备忘录" size="380px" :with-header="false" class="memo-drawer">
+    <el-drawer v-model="memoDrawer" title="备忘录" size="min(380px, 85%)" :with-header="false" class="memo-drawer">
       <div class="memo-drawer-head">
         <div>
           <h2>备忘录</h2>
@@ -1030,7 +1030,7 @@ function dueType(memo) {
     </el-drawer>
 
     <!-- 备忘新增/编辑弹窗 -->
-    <el-dialog v-model="memoDialog" :title="memoEditingId ? '编辑备忘' : '新增备忘'" width="420px">
+    <el-dialog v-model="memoDialog" :title="memoEditingId ? '编辑备忘' : '新增备忘'" width="min(420px, 92%)" top="5vh">
       <el-form :model="memoForm" label-position="top">
         <el-form-item label="标题" required>
           <el-input v-model="memoForm.title" placeholder="给家里打钱" maxlength="60" show-word-limit />
@@ -1055,7 +1055,7 @@ function dueType(memo) {
     </el-dialog>
 
     <!-- localStorage → SQLite 迁移提示 -->
-    <el-dialog v-model="migrateDialog" title="把浏览器数据迁入数据库" width="480px" :close-on-click-modal="false">
+    <el-dialog v-model="migrateDialog" title="把浏览器数据迁入数据库" width="min(480px, 92%)" top="5vh" :close-on-click-modal="false">
       <div class="migrate-notice">
         <el-alert :closable="false" type="warning" :title="'检测到浏览器里有旧数据'" show-icon>
           <template #default>
