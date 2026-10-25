@@ -7,24 +7,25 @@ import api, { pingDb, fetchAllItems, fetchAllMemos, saveItems, saveMemos, remove
 
 const NEXT_STATUS = { todo: 'doing', doing: 'done', done: 'todo' }
 
-// ---------- 鉴权系统(纯后端 API + cookie) ----------
+// ---------- 鉴权系统(纯前端 localStorage + 后端 login API) ----------
+const AUTH_KEY = 'tansuo_auth'
+const AUTH_TTL = 3 * 24 * 60 * 60 * 1000  // 3 天(ms)
+
 const currentUser = ref(null)   // { username, role }
-const authChecking = ref(true)  // 首次加载时正在验证 cookie
+const authChecking = ref(true)
 
-// 登录表单
-const loginForm = ref({ username: '', password: '' })
-const loginLoading = ref(false)
-
-async function checkAuth() {
-  authChecking.value = true
+function checkAuth() {
   try {
-    const res = await fetch('/api/me', { credentials: 'include' })
-    if (res.ok) {
-      const data = await res.json()
-      currentUser.value = { username: data.username, role: data.role }
-      return true
+    const raw = localStorage.getItem(AUTH_KEY)
+    if (raw) {
+      const obj = JSON.parse(raw)
+      if (obj.username && obj.role && obj.expireAt && obj.expireAt > Date.now()) {
+        currentUser.value = { username: obj.username, role: obj.role }
+        authChecking.value = false
+        return true
+      }
     }
-  } catch { /* 后端离线或无 cookie */ }
+  } catch {}
   currentUser.value = null
   authChecking.value = false
   return false
@@ -36,7 +37,6 @@ async function doLogin() {
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ username: loginForm.value.username.trim(), password: loginForm.value.password })
     })
     if (!res.ok) {
@@ -46,6 +46,10 @@ async function doLogin() {
     }
     const data = await res.json()
     currentUser.value = { username: data.username, role: data.role }
+    localStorage.setItem(AUTH_KEY, JSON.stringify({
+      username: data.username, role: data.role,
+      expireAt: Date.now() + AUTH_TTL
+    }))
     ElMessage.success('登录成功')
     await initializeFromBackend()
     await refreshDbBar()
@@ -54,8 +58,8 @@ async function doLogin() {
   }
 }
 
-async function doLogout() {
-  try { await fetch('/api/logout', { method: 'POST', credentials: 'include' }) } catch {}
+function doLogout() {
+  localStorage.removeItem(AUTH_KEY)
   currentUser.value = null
   dbConnected.value = false
 }
