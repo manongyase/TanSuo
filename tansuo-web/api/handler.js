@@ -132,9 +132,7 @@ function setSessionCookie(headers, sid, maxAgeSec) {
   const parts = [
     `${SESSION_COOKIE}=${encodeURIComponent(sid)}`,
     'Path=/',
-    'SameSite=None',   // 允许跨子域携带 cookie(Vercel Preview vs Production)
-    'Secure',          // HTTPS-only(Vercel 默认 HTTPS)
-    'HttpOnly'         // 不让 JS 读,防 XSS
+    'SameSite=Lax'     // 同源登录场景 Lax 最稳,Chrome 不会拒存
   ]
   if (maxAgeSec > 0) parts.push(`Max-Age=${maxAgeSec}`)
   else parts.push('Max-Age=0')
