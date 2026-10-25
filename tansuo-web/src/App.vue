@@ -7,11 +7,6 @@ import { MODULES, STATUS_MAP, STORAGE_KEY, MEMO_STORAGE_KEY, DEFAULT_MEMOS } fro
 // ====== 移动端调试助手 ======
 const debugLogs = ref([])
 const debugOpen = ref(false)
-const isMobile = ref(false)
-function checkMobile() { isMobile.value = window.innerWidth < 768 }
-checkMobile()
-window.addEventListener('resize', checkMobile)
-onBeforeUnmount(() => window.removeEventListener('resize', checkMobile))
 
 // 劫持 console,收集所有日志
 const _origConsole = { log: console.log, warn: console.warn, error: console.error }
