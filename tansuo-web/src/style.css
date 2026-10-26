@@ -891,6 +891,7 @@ body {
 .sidebar .foot-actions .el-button {
   width: 100%;
   justify-content: center;
+  margin: 0 !important;
 }
 
 /* 主区：main-wrap flex column，page-head + content 纵向 */
