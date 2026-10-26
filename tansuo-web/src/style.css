@@ -883,9 +883,14 @@ body {
 .sidebar .foot-dot.offline { background: #f87171; }
 .sidebar .foot-actions {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
   margin-top: 6px;
   padding: 0 4px;
+}
+.sidebar .foot-actions .el-button {
+  width: 100%;
+  justify-content: center;
 }
 
 /* 主区：main-wrap flex column，page-head + content 纵向 */
