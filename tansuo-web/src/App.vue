@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton } from '@element-plus/icons-vue'
 import { MODULES, STATUS_MAP, STORAGE_KEY, MEMO_STORAGE_KEY, DEFAULT_MEMOS } from './modules'
 import api, { pingDb, fetchAllItems, fetchAllMemos, saveItems, saveMemos, removeItem as removeItemFromApi, removeMemo as removeMemoFromApi, migrateFromLocalStorage, dbStats } from './api.js'
 
@@ -831,8 +831,8 @@ function dueType(memo) {
             <span v-else>后端离线</span>
           </div>
           <div class="foot-actions">
-            <el-button type="primary" size="small" :loading="checkingDb" @click="checkDbIntegrity">🔍 检查</el-button>
-            <el-button link type="success" size="small" v-if="canEdit" :loading="syncingDb" @click="manualSyncToDb">💾 同步</el-button>
+            <el-button type="primary" size="small" :icon="Search" :loading="checkingDb" @click="checkDbIntegrity">检查</el-button>
+            <el-button type="success" size="small" v-if="canEdit" :icon="RefreshRight" :loading="syncingDb" @click="manualSyncToDb">同步</el-button>
           </div>
         </div>
       </el-aside>
