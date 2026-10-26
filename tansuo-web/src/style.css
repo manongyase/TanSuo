@@ -730,6 +730,7 @@ body {
   margin-top: 1px;
 }
 .head-stats .el-progress--circle { width: 64px !important; height: 64px !important; }
+.head-stats .el-progress--dashboard { width: 64px !important; height: 64px !important; margin: 0 auto; }
 
 .head-right {
   flex: 0 0 auto;
