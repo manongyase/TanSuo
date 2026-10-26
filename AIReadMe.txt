@@ -648,4 +648,222 @@
   16:00  TanSuo 9976c6f → WebPage 56e2ae3
   16:05  写本总结
 
+========================================═══════════════════════════════════════
+ 【十七、2026-10-26 会话实战记录 · 重构 + 绘制修复】
+═══════════════════════════════════════
+
+  日期:2026-10-26
+  目标:删 debug-fab + handler.js 拆模块 + dashboard/侧边栏按钮绘制修复
+  最终状态:✅ 全部修复,双仓库推送
+  提交链:e71ad7e → b032863 → 263c851 → 28b4624 → 0027bd0 → 9de5492 → ecaad16 → 8c26909
+
+┌─────────────────────────────────────────────┐
+│ 一、今日 5 大绘制/布局 Bug 的完整错误链     │
+└─────────────────────────────────────────────┘
+
+  Bug 1:handler.js 579 行臃肿
+  ── 根因:全堆在一个文件里,所有 D1 调用/Auth/Stores 混在一起
+  修复:拆成 api/lib/ 4 个模块
+       handler.js 300 行 ← 薄路由,只做参数校验+路由分发
+       api/lib/d1.js 114 行 ← D1 REST 客户端(query + batch)
+       api/lib/auth.js  88 行 ← HMAC cookie session + verifySession
+       api/lib/stores.js 98 行 ← Items/Memos CRUD 封装
+
+  Bug 2:el-progress--dashboard 绘制偏差
+  ── 根因:CSS 只覆盖了 .el-progress--circle,没覆盖 --dashboard
+       Element Plus dashboard 模式默认 width/height/定位和 circle 不同
+  修复:style.css 加一行
+       .head-stats .el-progress--dashboard { width:64px; height:64px; margin:0 auto; }
+
+  Bug 3:侧边栏检查/同步按钮不均衡(水平排列)
+  ── 根因链(5 层):
+    Layer 1:emoji 🔍💾 系统字体渲染,大小/基线和平台有关
+    Layer 2:按钮类型不一致 — 一个 type="primary" 实心,一个 link type="success" 虚
+    Layer 3:水平排列时两个按钮宽度由内容决定,emoji 本身宽度不一样
+    Layer 4:同步按钮有 margin-left:12px(Element Plus .el-button--success 默认!)
+    Layer 5:父容器 .foot-actions 只有 gap:6px 没处理 width/对齐
+  修复链:
+    L1:emoji → Element Plus :icon="Search" / :icon="RefreshRight"
+    L2:统一 type,都用实心按钮
+    L3:用户改需求 → 垂直排列(检查在上,同步在下)
+    L4:margin:0 !important 清 Element Plus 默认 margin
+    L5:width:100% + justify-content:center + gap:8px(防误触)
+
+  Bug 4:Vite 预构建缓存不更新(反复出现!)
+  ── 根因链:
+    WSL 里跑 vite → Windows 侧 edit 文件 → WSL 进程能实时读到新文件 ✓
+    但 vite 的预构建缓存(node_modules/.vite)可能还存着旧代码
+    特别是 import 新图标名(RefreshRight)时,预构建产物里没有
+    → HMR 更新了 App.vue 模板,但 icons-vue 的预构建产物还是旧的
+    → :icon="RefreshRight" 在运行时变成 undefined,模板里没有 SVG
+  症状:浏览器里看到旧代码,但本地文件是新的
+  根因识别:curl http://localhost:5173/src/App.vue 看 vite serve 的实际代码
+          如果 import 行里没有 RefreshRight,就是预构建缓存炸了
+  修复:
+    pkill -9 -f vite 2>/dev/null
+    rm -rf node_modules/.vite
+    重新启动 vite
+    
+  ⚠️ 关键教训:vite --force 只重优化依赖,不会删掉整个 .vite 目录里的 CSS 缓存
+     如果是 style.css 的改动不生效,必须 rm -rf node_modules/.vite 再重启
+     CSS 通过 __vite__css 字符串注入,缓存比 JS 模块更顽固
+
+  Bug 5:WSL 多 vite 进程占端口
+  ── 根因:之前 kill 没杀干净,两个 vite 进程同时监听 5173
+       一个是 root 起的 --force,一个是 front 起的
+       curl 能返回但内容是旧进程的
+  修复:kill -9 两个进程,确认 ss -tlnp | grep 5173 为空再重启
+  教训:多进程时要看 ps aux | grep vite,不要只看端口(端口只能看到一个)
+
+┌─────────────────────────────────────────────┐
+│ 二、Element Plus 按钮的隐藏默认值(巨坑)    │
+└─────────────────────────────────────────────┘
+
+  今天反复踩了 Element Plus .el-button 的坑,总结:
+
+  1. .el-button--success 默认有 margin-left:12px
+     (可能是为了和前面的按钮组合时的间距)
+     → 必须用 margin:0 !important 清掉
+
+  2. link 按钮和实心按钮高度不一样
+     link 没有 border/padding 像链接,height 由 line-height 决定
+     实心按钮 height 由 --el-button-height 变量决定(默认 32px)
+     → 同组按钮必须统一 type 才能对齐
+
+  3. .el-button 的 :icon 属性要求图标名已 import 且注册
+     没 import 的图标在模板里会被当作 undefined
+     → 浏览器里看不到 SVG,只剩文字
+     → 检查 curl vite serve 的代码,看 import 行有没有
+
+  4. Element Plus 组件的 CSS 变量优先级很高
+     想用 :deep() 覆盖可能没用,得直接写具体类名
+     → 比如 .head-stats .el-progress--dashboard { width:64px !important; }
+     → !important 在这里是合理的,因为是精确作用域覆盖
+
+┌─────────────────────────────────────────────┐
+│ 三、Vite 缓存清除 SOP(照抄就能用)          │
+└─────────────────────────────────────────────┘
+
+  场景 1:改了 import 语句(加/删 icon、加新 import)→ 预构建缓存炸
+  场景 2:改了 CSS 但浏览器里不生效 → HMR 没传播到 style injector
+  场景 3:看到旧代码,刷新没用 → 多进程或旧缓存
+
+  SOP:
+    # 1. 杀所有 vite(注意 WSL 里可能有多个)
+    ps aux | grep vite | grep -v grep | awk '{print $2}' | xargs kill -9
+
+    # 2. 清预构建缓存(关键!)
+    rm -rf node_modules/.vite
+
+    # 3. 确认端口空了
+    ss -tlnp | grep 5173 || echo "port free"
+
+    # 4. 重启 vite
+    npm run dev  # 或 node node_modules/vite/bin/vite.js --host 0.0.0.0
+
+    # 5. 验证
+    curl http://localhost:5173/src/App.vue | grep "RefreshRight"
+    # 或浏览器 DevTools → Network → Disable cache + Ctrl+Shift+R
+
+  ⚠️ Windows 侧杀进程:
+     taskkill /F /PID 3148
+     或 Get-Process node | Stop-Process -Force
+     注意:WSL 里的进程在 Windows 侧可能看不到,
+          优先用 wsl -u root -e bash -c 'pkill -9 -f vite'
+
+┌─────────────────────────────────────────────┐
+│ 四、今日 8 个 Commit 汇总                   │
+└─────────────────────────────────────────────┘
+
+  e71ad7e  fix: 删 debug-fab + console 劫持(-102 行)
+  b032863  refactor: handler.js 拆 api/lib/{d1,auth,stores}(579→300 行)
+  263c851  fix: 闭包 bug(method 显式传参) + COMPONENTS.md
+  28b4624  fix: dashboard CSS 覆盖(.el-progress--dashboard width/height)
+  0027bd0  fix: 按钮 emoji→Element Plus 图标 + 统一 type
+  9de5492  fix: 侧边栏按钮垂直排列(flex-direction:column + width:100%)
+  ecaad16  fix: 同步按钮 margin-left:12px→0(!important)
+  8c26909  fix: 按钮间距 4px→8px 防误触
+
+┌─────────────────────────────────────────────┐
+│ 五、App.vue 要不要拆?→ 现在不拆             │
+└─────────────────────────────────────────────┘
+
+  当前 App.vue ≈ 1086 行(script ~300 行,template ~700,style ~26)
+  handler.js 已拆到 300 行 ✅
+  api/lib/* 各 88-114 行 ✅
+
+  为什么现在不拆 App.vue:
+  1. script 部分 300 行在临界点,再拆收益递减
+  2. template 里所有 dialog/drawer 的 v-model 依赖顶层 ref
+     拆成组件后需要 props + emits 通信链,至少 15 个 props 要传
+  3. v-if/v-else 相邻约束是地雷(上次就是这个结构 bug)
+  4. 任何 prop 传错类型会白屏
+
+  什么时候该拆:
+  - script 超过 400 行
+  - 新增第 6 个模块
+  - 加 vue-router 时(Layout 自然变成独立组件)
+
+  已准备好 COMPONENTS.md 设计文档,未来拆的时候直接用。
+
+┌─────────────────────────────────────────────┐
+│ 六、核心思想沉淀(可迁移到其他项目)          │
+└─────────────────────────────────────────────┘
+
+  1. 「不要假设第三方组件的默认样式」
+     Element Plus 的按钮有隐藏 margin,Progress 有隐藏尺寸
+     → 先查 getComputedStyle 再决定怎么覆盖
+     → 用精确选择器 + !important 作用域覆盖比全局 reset 安全
+
+  2. 「垂直比水平更容易对齐」
+     两个按钮水平排列时宽度受内容影响(图标宽度、文字长度)
+     垂直排列时 width:100% 强制等宽,margin:0 强制对齐
+     → 移动端按钮组优先考虑垂直排列
+
+  3. 「curl vite serve 的代码判断缓存」
+     浏览器 DevTools 可能显示旧代码(Service Worker 缓存)
+     curl http://localhost:5173/src/App.vue | grep "关键字" 最准
+     看到新内容 = 缓存问题,看到旧内容 = vite 没重启
+
+  4. 「拆模块先看调用关系图」
+     handler.js 里 auth 和 stores 是独立的,可以拆
+     d1 是底层工具,auth/stores 都依赖它,所以 d1 放最前面
+     → 依赖方向:d1 ← auth, d1 ← stores ← handler
+
+  5. 「先定位根因再改,不要试错」
+     侧边栏按钮不均衡,我先后改了 emoji、改了 type、改了排列方向
+     最后用 getComputedStyle 查到 margin-left:12px 才是真根因
+     → 下次看到对齐问题,先跑 getComputedStyle 看 4 个方向:
+       margin/padding/width/height
+
+  6. 「两个仓库推送的顺序」
+     TanSuo 是主仓库(f:\TanSuo),WebPage 是 Vercel 部署仓库
+     每次改完:先 push TanSuo → Copy-Item 同步 → push WebPage
+     WebPage 绑的 Vercel 自动部署,所以那边是最终验证
+
+┌─────────────────────────────────────────────┐
+│ 七、时间线                                   │
+└─────────────────────────────────────────────┘
+
+  上午:
+  - 09:30 用户反馈 3 问题(debug-fab 没用、handler.js 臃肿、dashboard 偏差)
+  - 10:00 删 debug-fab(-102 行)
+  - 10:30 handler.js 拆 api/lib/4 模块(踩闭包 bug)
+  - 11:00 闭包 bug 修复 + COMPONENTS.md 写好
+  - 11:30 同步 WebPage → Vercel 部署
+
+  下午:
+  - 14:00 用户反馈绘制偏差还在(截图确认)
+  - 14:30 dashboard CSS 覆盖 style.css +1 行
+  - 15:00 Vite 缓存炸了 → kill + rm -rf .vite + 重启
+  - 15:30 验证 dashboard 渲染正常 → commit + push
+
+  傍晚:
+  - 16:00 用户反馈侧边栏按钮"根本不均衡对称"
+  - 16:30 emoji→图标 + 统一 type → 验证对齐
+  - 17:00 用户说"还是偏右" → getComputedStyle 查到 margin-left:12px
+  - 17:30 margin:0 !important + width:100% → 完美对齐 left 差=0
+  - 18:00 用户说"间距还是有,防误触" → gap 4→8px
+  - 18:30 全部 push → 写本总结
+
 ========================================
