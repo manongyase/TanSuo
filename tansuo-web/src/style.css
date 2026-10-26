@@ -884,7 +884,7 @@ body {
 .sidebar .foot-actions {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   margin-top: 6px;
   padding: 0 4px;
 }
