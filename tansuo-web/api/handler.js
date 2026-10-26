@@ -93,7 +93,7 @@ export default async function handler(req) {
 
     // /api/items/:id
     const mItemId = pathname.match(/^\/api\/items\/(.+)$/)
-    if (mItemId) return handleItemById(req, decodeURIComponent(mItemId[1]))
+    if (mItemId) return handleItemById(req, method, decodeURIComponent(mItemId[1]))
 
     // /api/memos(批量 GET/POST)
     if (pathname.match(/^\/api\/memos\/?$/) && (method === 'GET' || method === 'POST')) {
@@ -116,7 +116,7 @@ export default async function handler(req) {
 
     // /api/memos/:id
     const mMemoId = pathname.match(/^\/api\/memos\/(.+)$/)
-    if (mMemoId) return handleMemoById(req, decodeURIComponent(mMemoId[1]))
+    if (mMemoId) return handleMemoById(req, method, decodeURIComponent(mMemoId[1]))
 
     // /api/migrate
     if (pathname.match(/^\/api\/migrate$/) && method === 'POST') {
@@ -242,7 +242,7 @@ async function handleItemsRaw() {
   }
 }
 
-async function handleItemById(req, id) {
+async function handleItemById(req, method, id) {
   if (method === 'GET') {
     const rows = await listItems()
     const row = rows.find(r => r.id === id)
@@ -262,7 +262,7 @@ async function handleItemById(req, id) {
   return json({ error: `method ${method} not allowed` }, 405)
 }
 
-async function handleMemoById(req, id) {
+async function handleMemoById(req, method, id) {
   if (method === 'PUT') {
     const body = await req.json().catch(() => null)
     if (!body) return json({ error: 'invalid json' }, 400)
