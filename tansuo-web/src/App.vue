@@ -721,11 +721,17 @@ function dueType(memo) {
         </div>
         <el-progress type="dashboard" :percentage="progress" :color="current.color" :width="64" />
       </div>
-      <!-- 右：DB + 备忘 + 用户 -->
+      <!-- 右：DB + 检查/同步 + 备忘 + 用户 -->
       <div class="head-right">
         <el-tag :type="dbConnected ? 'success' : 'info'" effect="dark" round class="db-tag">
           {{ dbConnected ? 'DB 在线' : 'DB 离线' }}
         </el-tag>
+        <el-tooltip content="检查数据完整性" placement="bottom">
+          <el-button size="small" circle :icon="Search" :loading="checkingDb" @click="checkDbIntegrity" />
+        </el-tooltip>
+        <el-tooltip content="手动同步到 DB" placement="bottom" v-if="canEdit">
+          <el-button size="small" circle type="success" :icon="RefreshRight" :loading="syncingDb" @click="manualSyncToDb" />
+        </el-tooltip>
         <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
           <el-button :icon="Bell" @click="openMemoDrawer" plain size="small">备忘</el-button>
         </el-badge>
