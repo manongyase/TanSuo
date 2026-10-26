@@ -5,6 +5,53 @@
   --line: #e8ebf3;
 }
 
+/* ---------- 暗黑模式 ---------- */
+html.dark {
+  --bg: #1a1c24;
+  --ink: #e4e6f0;
+  --muted: #8b91a3;
+  --line: #2c3040;
+}
+html.dark body {
+  background: var(--bg);
+  color: var(--ink);
+}
+html.dark .app { background: var(--bg); }
+html.dark .topbar {
+  background: rgba(30, 32, 42, 0.85);
+  border-bottom: 1px solid var(--line);
+}
+html.dark .hero,
+html.dark .item-card,
+html.dark .memo-card {
+  background: #222530;
+  border-color: var(--line);
+  color: var(--ink);
+}
+html.dark .hero h1,
+html.dark .item-card h3,
+html.dark .goal-card h3 {
+  color: var(--ink);
+}
+html.dark .hero-desc,
+html.dark .item-note,
+html.dark .hero-sub,
+html.dark .stat-label {
+  color: var(--muted);
+}
+html.dark .memo-drawer .el-drawer__body { background: #1a1c24; }
+html.dark .memo-drawer-head { background: linear-gradient(180deg, #222530 60%, transparent); border-bottom-color: var(--line); }
+html.dark .memo-drawer-head h2 { color: var(--ink); }
+html.dark .foot-user { background: #222530; }
+html.dark .nav-title { color: #6a7099 !important; }
+html.dark .head-kicker { color: var(--el-color-primary) !important; }
+html.dark .head-title { color: var(--ink); }
+html.dark .head-sub { color: var(--muted); }
+html.dark .login-card { background: #222530; color: var(--ink); }
+html.dark .login-title { color: var(--ink); }
+html.dark .login-sub { color: var(--muted); }
+html.dark .topbar-user { background: rgba(255,255,255,0.06); color: var(--ink); }
+
 * {
   box-sizing: border-box;
 }

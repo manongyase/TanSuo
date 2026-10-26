@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, RefreshRight, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton, Sunny, Moon } from '@element-plus/icons-vue'
 import { MODULES, STATUS_MAP, STORAGE_KEY, MEMO_STORAGE_KEY, DEFAULT_MEMOS } from './modules'
 import api, { pingDb, fetchAllItems, fetchAllMemos, saveItems, saveMemos, removeItem as removeItemFromApi, removeMemo as removeMemoFromApi, migrateFromLocalStorage, dbStats } from './api.js'
 
@@ -111,6 +111,21 @@ function setupBreakpoint() {
   mql.addEventListener('change', apply)
   window.addEventListener('resize', apply)
 }
+
+// ---------- 明暗主题 ----------
+const THEME_KEY = 'tansuo_theme'
+const isDark = ref(localStorage.getItem(THEME_KEY) === 'dark')
+function applyTheme() {
+  if (isDark.value) document.documentElement.classList.add('dark')
+  else document.documentElement.classList.remove('dark')
+}
+function toggleTheme() {
+  isDark.value = !isDark.value
+  localStorage.setItem(THEME_KEY, isDark.value ? 'dark' : 'light')
+  applyTheme()
+}
+applyTheme()
+watch(isDark, applyTheme)
 
 onMounted(async () => {
   setupBreakpoint()
@@ -735,6 +750,9 @@ function dueType(memo) {
         <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
           <el-button :icon="Bell" @click="openMemoDrawer" plain size="small">备忘</el-button>
         </el-badge>
+        <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="bottom">
+          <el-button size="small" circle :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
+        </el-tooltip>
         <div class="topbar-user">
           <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
           <span class="user-name">{{ currentUser?.username }}</span>
@@ -868,6 +886,9 @@ function dueType(memo) {
               </el-tag>
             </el-tooltip>
             <el-button :icon="Bell" @click="openMemoDrawer" plain size="small" title="备忘录">备忘</el-button>
+            <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="bottom">
+              <el-button size="small" circle :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
+            </el-tooltip>
             <div class="topbar-user">
               <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
               <span class="user-name">{{ currentUser?.username }}</span>
