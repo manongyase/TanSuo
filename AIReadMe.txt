@@ -1,7 +1,11 @@
 ========================================
   TanSuo 项目 · AI 踩坑经验手册
-  更新: 2026-10-25 v2 (新增鉴权系统、WSL 环境、Vercel 域名、Element Plus 图标)
+  更新: 2026-10-28 v3
   用途: 每次执行命令前先过一遍，避免重复踩同坑
+
+  ⚠️ 新会话必读 → SESSION_START.md (快速上手)
+  ⚠️ 常见错误 → TROUBLESHOOT.md (12 个坑)
+  ⚠️ 本文件 → 详细历史记录 + 技术细节
 ========================================
 
 
@@ -1012,5 +1016,38 @@
   21:10 启动 vite → 验证三状态(亮→暗→亮)全通
   21:20 commit + 双仓库推(WebPage 5644651)
   21:30 写本总结
+
+========================================
+ 【十九章 · 2026-10-27 桌面工具栏重构 + Vercel 灾难】
+========================================
+
+  改动内容:
+  1. 桌面 head-right: 横排展开胶囊工具栏 → 默认收起一个 ⊕ 箭头, 点击展开
+  2. 备忘录 🔔 紧贴标题右边 (永不隐藏)
+  3. 迷你进度条替代 64px 大圆球
+  4. 调试拖拽 Alt+D: pointerdown + setPointerCapture (绕过 EP 事件拦截)
+  5. .closest('.head-*') SCSS 语法错误 → [class*="head-"]
+  6. 备忘录抽屉 ultra-compact: 280px, 一屏多显示 2 条
+  7. 版本文件 public/version.txt + ℹ️ 版本弹窗
+  8. 齿轮按钮 isDev 判断 (生产隐藏)
+
+  WebPage 仓库最终状态:
+  b674b27  feat: 伸缩箭头+胶囊工具栏+迷你进度条+紧凑备忘录+版本弹窗+齿轮dev-only
+  (这次只改 src/ + public/, 没碰 api/ 和 vercel.json)
+
+  本次踩的超级大坑 (详见 TROUBLESHOOT.md):
+
+  坑 #1: Vercel 绑的是 WebPage, 我一直推 TanSuo —— Vercel 永远拿不到新代码
+  坑 #2: 乱加 vercel.json 破坏 Vercel 构建 (root 字段不认 + 子目录冲突)
+  坑 #3: 把 TanSuo 新版 api/ (route.js handlers) 同步到 WebPage —— 登录直接 500
+  坑 #4: 模板里写 import.meta.env.DEV —— Vite build 炸
+  坑 #5: WSL node 找不到 —— 必须用完整路径 /home/front/.nvm/versions/node/v24.22.1/bin/node
+  坑 #6: WSL + Windows node_modules 冲突 ENOTDIR: 两边都 rm -rf 再装
+
+  教训:
+  1. WebPage 的 api/ 和 lib/ **不要动!** 只同步 src/ + public/
+  2. Vercel 不用 vercel.json, Dashboard 里配 Root Dir / Build Command / Output Dir
+  3. 双仓库同步脚本化 —— 见 SESSION_START.md 的 Step 1-5
+  4. 新会话先读 SESSION_START.md 和 TROUBLESHOOT.md
 
 ========================================
