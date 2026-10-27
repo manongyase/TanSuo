@@ -764,6 +764,14 @@ body {
   margin: 0;
   line-height: 1.2;
   color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.head-title .title-bell {
+  margin-left: 4px;
+  transform: translateY(0);
+  flex: none;
 }
 .head-sub {
   font-size: 13px;
@@ -846,6 +854,45 @@ body {
   height: 16px;
   background: rgba(0, 0, 0, 0.12);
   margin: 0 2px;
+}
+
+/* 收起态: 一个小圆形按钮 */
+.head-right .toolbar-toggle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 50%;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.head-right .toolbar-toggle:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+  transform: scale(1.05);
+}
+.head-right .toolbar-toggle:active {
+  transform: scale(0.95);
+}
+/* 展开态里的 Fold 收起按钮 */
+.head-right .toolbar-toggle.fold {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  color: var(--muted);
+}
+.head-right .toolbar-toggle.fold:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+  transform: none;
 }
 .topbar-user {
   display: flex;

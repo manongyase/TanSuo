@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, RefreshRight, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton, Sunny, Moon, Setting } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton, Sunny, Moon, Setting, Expand, Fold } from '@element-plus/icons-vue'
 import { MODULES, STATUS_MAP, STORAGE_KEY, MEMO_STORAGE_KEY, DEFAULT_MEMOS } from './modules'
 import api, { pingDb, fetchAllItems, fetchAllMemos, saveItems, saveMemos, removeItem as removeItemFromApi, removeMemo as removeMemoFromApi, migrateFromLocalStorage, dbStats } from './api.js'
 
@@ -116,6 +116,7 @@ function setupBreakpoint() {
 const THEME_KEY = 'tansuo_theme'
 const isDark = ref(localStorage.getItem(THEME_KEY) === 'dark')
 const isDebugDrag = ref(false)
+const toolbarOpen = ref(false) // 胶囊工具栏展开/收起,默认收起
 function toggleDebugDrag() {
   isDebugDrag.value = !isDebugDrag.value
   document.body.classList.toggle('debug-drag', isDebugDrag.value)
@@ -892,10 +893,17 @@ function dueType(memo) {
 
     <!-- 主区：纯 div，不再有 el-container 嵌套 -->
     <div class="topbar page-head" :style="{ '--accent': current.color }">
-      <!-- 左：模块标题 + 副标题 -->
+      <!-- 左：模块标题 + 副标题 + 备忘按钮(永不隐藏) -->
       <div class="head-left">
         <p class="head-kicker">MODULE · {{ current.key.toUpperCase() }}</p>
-        <h1 class="head-title">{{ current.name }}</h1>
+        <h1 class="head-title">
+          {{ current.name }}
+          <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
+            <el-tooltip content="备忘录" placement="top">
+              <el-button size="small" circle :icon="Bell" @click="openMemoDrawer" class="title-bell" />
+            </el-tooltip>
+          </el-badge>
+        </h1>
         <p class="head-sub">{{ current.subtitle }}</p>
       </div>
       <!-- 中：统计 + 迷你进度条 -->
@@ -913,9 +921,14 @@ function dueType(memo) {
           <el-progress :percentage="progress" :color="current.color" :stroke-width="5" :show-text="false" class="mini-bar" />
         </div>
       </div>
-      <!-- 右：胶囊工具栏 -->
+      <!-- 右：展开箭头(默认) / 胶囊工具栏(展开后) -->
       <div class="head-right">
-        <div class="toolbar-pill">
+        <!-- 收起态: 一个简洁的 Expand 箭头 -->
+        <div v-if="!toolbarOpen" class="toolbar-toggle" @click="toolbarOpen = true">
+          <el-icon :size="16"><Expand /></el-icon>
+        </div>
+        <!-- 展开态: 胶囊 -->
+        <div v-else class="toolbar-pill">
           <el-tooltip :content="dbConnected ? 'DB 在线' : 'DB 离线'" placement="top">
             <span class="db-dot" :class="{ offline: !dbConnected }"></span>
           </el-tooltip>
@@ -926,11 +939,6 @@ function dueType(memo) {
           <el-tooltip content="手动同步到 DB" placement="top" v-if="canEdit">
             <el-button size="small" circle type="success" :icon="RefreshRight" :loading="syncingDb" @click="manualSyncToDb" />
           </el-tooltip>
-          <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
-            <el-tooltip content="备忘录" placement="top">
-              <el-button size="small" circle :icon="Bell" @click="openMemoDrawer" />
-            </el-tooltip>
-          </el-badge>
           <span class="pill-sep"></span>
           <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="top">
             <el-button size="small" circle :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
@@ -943,6 +951,10 @@ function dueType(memo) {
             <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
             <span class="user-name">{{ currentUser?.username }}</span>
             <el-icon class="user-logout" @click="doLogout" title="登出"><SwitchButton /></el-icon>
+          </div>
+          <span class="pill-sep"></span>
+          <div class="toolbar-toggle fold" @click="toolbarOpen = false">
+            <el-icon :size="14"><Fold /></el-icon>
           </div>
         </div>
       </div>
