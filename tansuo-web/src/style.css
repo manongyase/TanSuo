@@ -538,36 +538,36 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 20px 16px;
+  padding: 14px 16px 10px;
   background: linear-gradient(180deg, #ffffff 60%, rgba(255, 255, 255, 0));
   border-bottom: 1px solid var(--line);
 }
 
 .memo-drawer-head h2 {
   margin: 0;
-  font-size: 18px;
-  letter-spacing: 0.4px;
+  font-size: 15px;
+  letter-spacing: 0.2px;
 }
 
 .memo-drawer-head p {
-  margin: 4px 0 0;
-  font-size: 12px;
+  margin: 2px 0 0;
+  font-size: 11px;
   color: var(--muted);
 }
 
 .memo-list {
-  padding: 14px 14px 28px;
+  padding: 10px 10px 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .memo-card {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: flex-start;
-  padding: 14px 14px 12px;
-  border-radius: 12px;
+  padding: 10px 10px 8px;
+  border-radius: 10px;
   background: #fff;
   border: 1px solid var(--line);
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
@@ -575,7 +575,7 @@ body {
 
 .memo-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(30, 41, 59, 0.06);
+  box-shadow: 0 2px 8px rgba(30, 41, 59, 0.05);
 }
 
 .memo-card.pinned {
@@ -584,7 +584,7 @@ body {
 }
 
 .memo-card.done {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .memo-card.done .memo-title {
@@ -594,7 +594,7 @@ body {
 
 .memo-main {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
 }
@@ -608,13 +608,13 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 6px;
+  gap: 4px;
 }
 
 .memo-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.4;
   word-break: break-word;
 }
 
@@ -622,7 +622,7 @@ body {
   flex-shrink: 0;
   cursor: pointer;
   color: #d0d5dd;
-  font-size: 14px;
+  font-size: 13px;
   padding: 2px;
   border-radius: 6px;
   transition: color 0.15s, background 0.15s;
@@ -638,15 +638,21 @@ body {
 }
 
 .memo-note {
-  margin: 6px 0;
-  font-size: 12px;
-  line-height: 1.55;
+  margin: 3px 0;
+  font-size: 11px;
+  line-height: 1.45;
   color: #6b7280;
   word-break: break-word;
 }
 
 .memo-meta {
-  margin-top: 4px;
+  margin-top: 2px;
+}
+
+.memo-meta .el-tag {
+  font-size: 11px !important;
+  padding: 0 6px !important;
+  height: 20px !important;
 }
 
 .memo-actions {
@@ -654,6 +660,9 @@ body {
   flex-direction: column;
   gap: 2px;
   flex-shrink: 0;
+}
+.memo-actions .el-button {
+  padding: 5px !important;
 }
 
 /* ---------- 移动端 tab bar ---------- */
