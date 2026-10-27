@@ -236,9 +236,18 @@ body {
   background: #ff6b6b;
 }
 
-.db-tag {
-  font-size: 11px;
-  font-weight: 500;
+.db-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #40c057;
+  display: inline-block;
+  box-shadow: 0 0 0 3px rgba(64, 192, 87, 0.2);
+  cursor: help;
+  flex-shrink: 0;
+}
+.db-dot.offline {
+  background: #868e96;
+  box-shadow: 0 0 0 3px rgba(134, 142, 150, 0.2);
 }
 
 .migrate-notice {
@@ -974,20 +983,36 @@ body {
 /* ---------- 移动端保持 ---------- */
 .mobile-app .topbar.page-head {
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 10px;
   padding: 14px 16px;
 }
+.mobile-app .head-left { width: 100%; }
 .mobile-app .head-title { font-size: 20px; }
 .mobile-app .head-stats {
   width: 100%;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
+.mobile-app .head-stats .stat-value { font-size: 18px; }
+.mobile-app .head-stats .stat-label { font-size: 10px; }
 .mobile-app .head-right {
   width: 100%;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 6px;
 }
+.mobile-app .head-right .el-button { padding: 8px; }
+.mobile-app .head-right .db-dot { margin: 0 4px; }
+.mobile-app .topbar-user { padding: 2px 6px; margin-left: auto; }
+.mobile-app .topbar-user .user-name { display: none; }
+.mobile-app .topbar-user .user-logout { display: none; }
+
+/* 移动端 toolbar 按钮全宽更易点 */
+.mobile-app .toolbar .el-button { width: 100%; }
+
+/* 移动端 dashboard 进度环紧凑 */
+.mobile-app .head-stats .el-progress--dashboard { width: 56px !important; height: 56px !important; }
 
 /* ====== 登录页面 ====== */
 .login-page {

@@ -738,9 +738,9 @@ function dueType(memo) {
       </div>
       <!-- 右：DB + 检查/同步 + 备忘 + 用户 -->
       <div class="head-right">
-        <el-tag :type="dbConnected ? 'success' : 'info'" effect="dark" round class="db-tag">
-          {{ dbConnected ? 'DB 在线' : 'DB 离线' }}
-        </el-tag>
+        <el-tooltip :content="dbConnected ? 'DB 在线' : 'DB 离线'" placement="bottom">
+          <span class="db-dot" :class="{ offline: !dbConnected }"></span>
+        </el-tooltip>
         <el-tooltip content="检查数据完整性" placement="bottom">
           <el-button size="small" circle :icon="Search" :loading="checkingDb" @click="checkDbIntegrity" />
         </el-tooltip>
@@ -748,7 +748,9 @@ function dueType(memo) {
           <el-button size="small" circle type="success" :icon="RefreshRight" :loading="syncingDb" @click="manualSyncToDb" />
         </el-tooltip>
         <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
-          <el-button :icon="Bell" @click="openMemoDrawer" plain size="small">备忘</el-button>
+          <el-tooltip content="备忘录" placement="bottom">
+            <el-button size="small" circle :icon="Bell" @click="openMemoDrawer" />
+          </el-tooltip>
         </el-badge>
         <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="bottom">
           <el-button size="small" circle :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
