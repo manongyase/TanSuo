@@ -1219,7 +1219,7 @@ function dueType(memo) {
     </el-dialog>
 
     <!-- 备忘录抽屉 -->
-    <el-drawer v-model="memoDrawer" title="备忘录" size="min(320px, 80%)" :with-header="false" class="memo-drawer">
+    <el-drawer v-model="memoDrawer" title="备忘录" size="280px" :with-header="false" class="memo-drawer">
       <div class="memo-drawer-head">
         <div>
           <h2>备忘录</h2>
