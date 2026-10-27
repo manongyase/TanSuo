@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, RefreshRight, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton, Sunny, Moon, Setting, Expand, Fold } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton, Sunny, Moon, Setting, Expand, Fold, QuestionFilled } from '@element-plus/icons-vue'
 import { MODULES, STATUS_MAP, STORAGE_KEY, MEMO_STORAGE_KEY, DEFAULT_MEMOS } from './modules'
 import api, { pingDb, fetchAllItems, fetchAllMemos, saveItems, saveMemos, removeItem as removeItemFromApi, removeMemo as removeMemoFromApi, migrateFromLocalStorage, dbStats } from './api.js'
 
@@ -117,6 +117,20 @@ const THEME_KEY = 'tansuo_theme'
 const isDark = ref(localStorage.getItem(THEME_KEY) === 'dark')
 const isDebugDrag = ref(false)
 const toolbarOpen = ref(false) // 胶囊工具栏展开/收起,默认收起
+const versionInfo = ref('')
+async function loadVersion() {
+  try {
+    const r = await fetch('/version.txt', { cache: 'no-cache' })
+    versionInfo.value = await r.text()
+  } catch { versionInfo.value = 'v1.3.0\n(版本文件加载失败)' }
+}
+function showVersion() {
+  ElMessageBox.alert(
+    `<pre style="font-size:12px;line-height:1.6;margin:0;white-space:pre-wrap;font-family:inherit">${versionInfo.value}</pre>`,
+    '📦 版本信息',
+    { dangerouslyUseHTMLString: true, confirmButtonText: '好的', customClass: 'version-dialog' }
+  )
+}
 function toggleDebugDrag() {
   isDebugDrag.value = !isDebugDrag.value
   document.body.classList.toggle('debug-drag', isDebugDrag.value)
@@ -136,7 +150,8 @@ watch(isDark, applyTheme)
 
 onMounted(async () => {
   setupBreakpoint()
-  enableDebugDrag() // Alt+D 切换调试拖拽模式
+  if (import.meta.env.DEV) enableDebugDrag() // 仅开发环境: Alt+D 调试拖拽
+  loadVersion() // 加载版本信息
   // 鉴权:没登录或已过期,跳过数据初始化
   if (!checkAuth()) return
   await initializeFromBackend()
@@ -943,10 +958,13 @@ function dueType(memo) {
           <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="top">
             <el-button size="small" circle :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
           </el-tooltip>
-          <el-tooltip content="🎨 调试拖拽 (Alt+D)" placement="top">
+          <el-tooltip content="🎨 调试拖拽 (Alt+D, 仅开发)" placement="top" v-if="import.meta.env.DEV">
             <el-button size="small" circle :icon="Setting" :type="isDebugDrag ? 'primary' : 'default'" @click="toggleDebugDrag" />
           </el-tooltip>
           <span class="pill-sep"></span>
+          <el-tooltip content="版本说明" placement="top">
+            <el-button size="small" circle :icon="QuestionFilled" @click="showVersion" />
+          </el-tooltip>
           <div class="topbar-user">
             <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
             <span class="user-name">{{ currentUser?.username }}</span>
