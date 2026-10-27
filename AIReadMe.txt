@@ -867,3 +867,150 @@
   - 18:30 全部 push → 写本总结
 
 ========================================
+
+═══════════════════════════════════════
+ 【十八、2026-10-26 晚 会话 · 移动端按钮 + 暗黑模式】
+═══════════════════════════════════════
+
+  日期:2026-10-26 晚
+  目标:移动端加检查/同步按钮 + VSCode 风格明暗切换
+  最终状态:✅ 全部完成,双仓库推送
+  提交链:512037f → 5644651
+
+┌─────────────────────────────────────────────┐
+│ 一、移动端检查/同步按钮(最小侵入)          │
+└─────────────────────────────────────────────┘
+
+  问题:侧边栏 foot-actions 只在 desktop-root 里有(v-else 分支)
+       移动端走 v-if="isMobile" 分支,按钮根本没渲染
+  方案:移动端 head-right 区域加 circle icon-only 按钮
+  位置:head-right,DB 标签之后,topbar-user 之前
+  好处:不重排移动端布局,复用已有 toggleTheme 的模式
+
+  HTML(移动端 L725 区域):
+    <el-tooltip content="检查数据完整性" placement="bottom">
+      <el-button size="small" circle :icon="Search"
+                 :loading="checkingDb" @click="checkDbIntegrity" />
+    </el-tooltip>
+    <el-tooltip content="手动同步到 DB" placement="bottom" v-if="canEdit">
+      <el-button size="small" circle type="success" :icon="RefreshRight"
+                 :loading="syncingDb" @click="manualSyncToDb" />
+    </el-tooltip>
+
+  两端按钮对比:
+    移动端 head-right: [DB在线] [🔍] [💾] [备忘] [🌙] [头像]
+    桌面端 head-right: [DB·在线] [备忘] [🌙] [头像]
+    桌面端额外在 sidebar-foot 里有垂直排列的[检查/同步]
+
+┌─────────────────────────────────────────────┐
+│ 二、明暗切换实现(Element Plus 内置方案)    │
+└─────────────────────────────────────────────┘
+
+  核心思路:html.dark 类名 + Element Plus 暗黑 CSS + 自定义变量覆盖
+
+  改动 3 个文件:
+  1. main.js 加 1 行:
+     import 'element-plus/theme-chalk/dark/css-vars.css'
+  2. App.vue script 加 ~15 行:
+     const THEME_KEY = 'tansuo_theme'
+     const isDark = ref(localStorage.getItem(THEME_KEY) === 'dark')
+     function applyTheme() {
+       if (isDark.value) document.documentElement.classList.add('dark')
+       else document.documentElement.classList.remove('dark')
+     }
+     function toggleTheme() {
+       isDark.value = !isDark.value
+       localStorage.setItem(THEME_KEY, isDark.value ? 'dark' : 'light')
+       applyTheme()
+     }
+     applyTheme()
+     watch(isDark, applyTheme)
+  3. App.vue template 加 2 处按钮(mobile + desktop 各一个)
+     <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="bottom">
+       <el-button size="small" circle
+                  :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
+     </el-tooltip>
+  4. style.css 加 ~40 行 html.dark 覆盖:
+     html.dark { --bg:#1a1c24; --ink:#e4e6f0; --muted:#8b91a3; --line:#2c3040 }
+     html.dark body/topbar/hero/card/memo-card/drawer/user ...
+
+  Element Plus 暗黑模式工作原理:
+    element-plus/theme-chalk/dark/css-vars.css 定义了一套
+    html.dark 下的 --el-color-* CSS 变量覆盖
+    所有 el-button/el-card/el-dialog/el-table 等组件
+    自动读取暗色变量,无需逐个组件写 class
+    → 自定义组件(hero/item-card/sidebar)需要自己写 html.dark 覆盖
+
+  验证结果(browser_evaluate):
+    Init dark: false bg="rgb(244, 246, 251)"  ✅ 亮色
+    After click: CLICKED                       ✅ 触发切换
+    Dark mode: true bg="rgb(26, 28, 36)"       ✅ 暗色生效
+    Back light: false                          ✅ 可切回亮
+
+┌─────────────────────────────────────────────┐
+│ 三、踩过的坑                                │
+└─────────────────────────────────────────────┘
+
+  坑 1:移动端 v-if/v-else 分支里的组件不共享
+  ── desktop-root 的 sidebar-foot 按钮移动端看不到
+     因为移动端渲染的是 mobile-app 分支,完全独立的模板
+  教训:改任何功能先确认它在两个模板里各有一份
+
+  坑 2:Element Plus 暗色模式只覆盖 --el-color-*
+  ── 自定义 CSS 变量(--bg/--ink/--muted/--line)需要手动覆盖
+     否则 body 背景还是亮色,el-button 已经变暗色 → 视觉断裂
+  教训:自定义变量 + 组件内联颜色都要在 html.dark 下覆盖
+
+  坑 3:isDark ref 初始化读 localStorage 的时机
+  ── localStorage.getItem 是同步的,可以在 ref() 初始化里直接调
+     不需要 onMounted 再读
+  教训:能用同步 API 初始化就不要 defer 到 mounted
+
+  坑 4:主题按钮位置——两端不一样但各自合理
+  ── 移动端放 head-right(topbar-user 前)
+     桌面端也放 head-right(备忘按钮后,topbar-user 前)
+     两端 head-right 结构不一样(桌面没有检查/同步 circle 按钮)
+     所以主题按钮不能放同一个位置,各自手动加
+  教训:v-if/v-else 两边的模板结构不同,加按钮要各加各的
+
+┌─────────────────────────────────────────────┐
+│ 四、核心思想                                │
+└─────────────────────────────────────────────┘
+
+  1. 「Element Plus 暗色 = html.dark + 暗黑 CSS」
+     记住:main.js 加 import,App.vue 切类名,就能让 90% 的
+     Element Plus 组件自动变色。剩下的自定义组件用 html.dark
+     覆盖自己的 CSS 变量就行。
+
+  2. 「两端按钮位置不同但功能等价」
+     移动端 head-right 紧凑排列 circle icon-only 按钮
+     桌面端 sidebar-foot 有独立区域放垂直按钮
+     → 不强制两端一样,追求各自最优体验
+
+  3. 「最小侵入原则」
+     加检查/同步按钮时我只加了 7 行 template,没改布局没改 CSS
+     → 如果能在现有容器里塞下,就别重排整个区域
+
+  4. 「Sunny/Moon 图标名」
+     Element Plus icons-vue 包里有 Sunny/Moon 两个图标
+     切主题时根据 isDark 动态切换:isDark ? Sunny : Moon
+     → 保持视觉语义正确(暗色模式显示太阳,提示"点我切亮")
+
+┌─────────────────────────────────────────────┐
+│ 五、时间线                                  │
+└─────────────────────────────────────────────┘
+
+  20:00 用户反馈"手机上检查/同步按钮没了"
+  20:10 查看 mobile-app 模板 → 确认没有 foot-actions
+  20:15 在 head-right 加 circle icon-only 按钮
+  20:20 vite 缓存炸了 → kill + rm -rf .vite + 重启
+  20:30 验证按钮渲染正常 → 功能一致
+  20:40 commit + 双仓库推(WebPage 512037f)
+  20:50 用户说"加白天黑夜切换,VSCode 风格"
+  20:55 main.js 加 dark/css-vars.css + App.vue 加 isDark/toggleTheme
+  21:00 两端 head-right 各加主题按钮 + style.css 加 html.dark 覆盖
+  21:10 启动 vite → 验证三状态(亮→暗→亮)全通
+  21:20 commit + 双仓库推(WebPage 5644651)
+  21:30 写本总结
+
+========================================
