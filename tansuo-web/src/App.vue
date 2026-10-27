@@ -117,6 +117,7 @@ const THEME_KEY = 'tansuo_theme'
 const isDark = ref(localStorage.getItem(THEME_KEY) === 'dark')
 const isDebugDrag = ref(false)
 const toolbarOpen = ref(false) // 胶囊工具栏展开/收起,默认收起
+const isDev = import.meta.env.DEV // Vue 模板里不能直接用 import.meta,先提出来
 const versionInfo = ref('')
 async function loadVersion() {
   try {
@@ -958,7 +959,7 @@ function dueType(memo) {
           <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="top">
             <el-button size="small" circle :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
           </el-tooltip>
-          <el-tooltip content="🎨 调试拖拽 (Alt+D, 仅开发)" placement="top" v-if="import.meta.env.DEV">
+          <el-tooltip content="🎨 调试拖拽 (Alt+D, 仅开发)" placement="top" v-if="isDev">
             <el-button size="small" circle :icon="Setting" :type="isDebugDrag ? 'primary' : 'default'" @click="toggleDebugDrag" />
           </el-tooltip>
           <span class="pill-sep"></span>
