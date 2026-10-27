@@ -738,9 +738,9 @@ body {
 /* ---------- page-head（顶栏合并了 Hero 信息：标题 + 统计 + 进度环） ---------- */
 .topbar.page-head {
   display: flex;
-  align-items: flex-start;
-  gap: 24px;
-  padding: 16px 20px;
+  align-items: center;
+  gap: 32px;
+  padding: 16px 24px;
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent) 0%, #fff 60%);
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
@@ -819,24 +819,45 @@ body {
   min-width: 80px;
 }
 
-/* 右：一竖排按钮 */
+/* 右：胶囊工具栏 */
 .head-right {
   flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
 }
-.head-right .db-dot { margin: 0; }
-.head-right .el-button { margin: 0 !important; }
+.head-right .toolbar-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 24px;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s;
+}
+.head-right .toolbar-pill:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.head-right .toolbar-pill .el-button { margin: 0 !important; }
+.head-right .toolbar-pill .db-dot { margin: 0 2px 0 4px; }
+.head-right .pill-sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.12);
+  margin: 0 2px;
+}
 .topbar-user {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 6px;
-  background: rgba(0,0,0,.04);
-  border-radius: 20px;
+  padding: 2px 6px 2px 6px;
+  border-radius: 14px;
   font-size: 13px;
+  margin-left: 2px;
+}
+.head-right .toolbar-pill .topbar-user {
+  background: rgba(0, 0, 0, 0.05);
 }
 .topbar-user .user-badge { width: 20px; height: 20px; font-size: 10px; }
 .topbar-user .user-name { flex: none; }

@@ -913,31 +913,37 @@ function dueType(memo) {
           <el-progress :percentage="progress" :color="current.color" :stroke-width="5" :show-text="false" class="mini-bar" />
         </div>
       </div>
-      <!-- 右：一竖排按钮 -->
+      <!-- 右：胶囊工具栏 -->
       <div class="head-right">
-        <el-tooltip :content="dbConnected ? 'DB 在线' : 'DB 离线'" placement="left">
-          <span class="db-dot" :class="{ offline: !dbConnected }"></span>
-        </el-tooltip>
-        <el-tooltip content="检查数据完整性" placement="left">
-          <el-button size="small" circle :icon="Search" :loading="checkingDb" @click="checkDbIntegrity" />
-        </el-tooltip>
-        <el-tooltip content="手动同步到 DB" placement="left" v-if="canEdit">
-          <el-button size="small" circle type="success" :icon="RefreshRight" :loading="syncingDb" @click="manualSyncToDb" />
-        </el-tooltip>
-        <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
-          <el-tooltip content="备忘录" placement="left">
-            <el-button size="small" circle :icon="Bell" @click="openMemoDrawer" />
+        <div class="toolbar-pill">
+          <el-tooltip :content="dbConnected ? 'DB 在线' : 'DB 离线'" placement="top">
+            <span class="db-dot" :class="{ offline: !dbConnected }"></span>
           </el-tooltip>
-        </el-badge>
-        <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="left">
-          <el-button size="small" circle :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
-        </el-tooltip>
-        <el-tooltip content="🎨 调试拖拽 (Alt+D)" placement="left">
-          <el-button size="small" circle :icon="Setting" :type="isDebugDrag ? 'primary' : 'default'" @click="toggleDebugDrag" />
-        </el-tooltip>
-        <div class="topbar-user">
-          <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
-          <el-icon class="user-logout" @click="doLogout" title="登出"><SwitchButton /></el-icon>
+          <span class="pill-sep"></span>
+          <el-tooltip content="检查数据完整性" placement="top">
+            <el-button size="small" circle :icon="Search" :loading="checkingDb" @click="checkDbIntegrity" />
+          </el-tooltip>
+          <el-tooltip content="手动同步到 DB" placement="top" v-if="canEdit">
+            <el-button size="small" circle type="success" :icon="RefreshRight" :loading="syncingDb" @click="manualSyncToDb" />
+          </el-tooltip>
+          <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
+            <el-tooltip content="备忘录" placement="top">
+              <el-button size="small" circle :icon="Bell" @click="openMemoDrawer" />
+            </el-tooltip>
+          </el-badge>
+          <span class="pill-sep"></span>
+          <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="top">
+            <el-button size="small" circle :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
+          </el-tooltip>
+          <el-tooltip content="🎨 调试拖拽 (Alt+D)" placement="top">
+            <el-button size="small" circle :icon="Setting" :type="isDebugDrag ? 'primary' : 'default'" @click="toggleDebugDrag" />
+          </el-tooltip>
+          <span class="pill-sep"></span>
+          <div class="topbar-user">
+            <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
+            <span class="user-name">{{ currentUser?.username }}</span>
+            <el-icon class="user-logout" @click="doLogout" title="登出"><SwitchButton /></el-icon>
+          </div>
         </div>
       </div>
     </div>
