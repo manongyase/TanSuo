@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, RefreshRight, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton, Sunny, Moon } from '@element-plus/icons-vue'
+import { Search, RefreshRight, Plus, Delete, Calendar, Bell, Star, Edit, WarningFilled, User, Lock, SwitchButton, Sunny, Moon, Setting } from '@element-plus/icons-vue'
 import { MODULES, STATUS_MAP, STORAGE_KEY, MEMO_STORAGE_KEY, DEFAULT_MEMOS } from './modules'
 import api, { pingDb, fetchAllItems, fetchAllMemos, saveItems, saveMemos, removeItem as removeItemFromApi, removeMemo as removeMemoFromApi, migrateFromLocalStorage, dbStats } from './api.js'
 
@@ -115,6 +115,12 @@ function setupBreakpoint() {
 // ---------- 明暗主题 ----------
 const THEME_KEY = 'tansuo_theme'
 const isDark = ref(localStorage.getItem(THEME_KEY) === 'dark')
+const isDebugDrag = ref(false)
+function toggleDebugDrag() {
+  isDebugDrag.value = !isDebugDrag.value
+  document.body.classList.toggle('debug-drag', isDebugDrag.value)
+  ElMessage({ message: isDebugDrag.value ? '🎨 调试拖拽 ON — 拖拽任意元素' : '调试拖拽 OFF', type: isDebugDrag.value ? 'info' : 'success' })
+}
 function applyTheme() {
   if (isDark.value) document.documentElement.classList.add('dark')
   else document.documentElement.classList.remove('dark')
@@ -129,11 +135,179 @@ watch(isDark, applyTheme)
 
 onMounted(async () => {
   setupBreakpoint()
+  enableDebugDrag() // Alt+D 切换调试拖拽模式
   // 鉴权:没登录或已过期,跳过数据初始化
   if (!checkAuth()) return
   await initializeFromBackend()
   await refreshDbBar()
 })
+
+// ---------- 调试拖拽模式 ----------
+function enableDebugDrag() {
+  let dragging = null
+  let startX = 0, startY = 0, originLeft = 0, originTop = 0
+  let tipEl = null
+
+  function makeTip(x, y, text) {
+    const d = document.createElement('div')
+    d.className = 'dd-tip'
+    d.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:#333;color:#fff;padding:6px 10px;border-radius:6px;font:12px/1.4 -apple-system,sans-serif;z-index:99999;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.3)`
+    d.textContent = text
+    document.body.appendChild(d)
+    return d
+  }
+
+  function showResult(el, originL, originT) {
+    const parent = el.parentElement
+    const cs = getComputedStyle(parent)
+    const flexDir = cs.flexDirection || 'row'
+    const gap = parseInt(cs.gap) || 0
+    const elRect = el.getBoundingClientRect()
+    const prevSib = el.previousElementSibling
+    const nextSib = el.nextElementSibling
+    const dx = parseFloat(el.style.left) || 0
+    const dy = parseFloat(el.style.top) || 0
+    const info = {
+      element: el.tagName + (el.className ? '.' + el.className.split(' ')[0] : ''),
+      parent: parent.tagName + '.' + (parent.className || '').split(' ')[0],
+      flexDirection: flexDir,
+      gapHint: gap ? gap + 'px' : '0 (没设 gap)',
+      self: {
+        marginLeft: getComputedStyle(el).marginLeft,
+        marginTop: getComputedStyle(el).marginTop,
+        marginRight: getComputedStyle(el).marginRight,
+        marginBottom: getComputedStyle(el).marginBottom,
+        width: Math.round(elRect.width) + 'px',
+        height: Math.round(elRect.height) + 'px',
+      },
+      prevGap: prevSib
+        ? Math.round(elRect.left - prevSib.getBoundingClientRect().right) + 'px'
+        : '(first)',
+      nextGap: nextSib
+        ? Math.round(nextSib.getBoundingClientRect().left - elRect.right) + 'px'
+        : '(last)',
+    }
+    console.log('🎨 DebugDrag 结果:', info)
+    ElMessageBox.confirm(
+      `<pre style="font-size:12px;line-height:1.5;margin:0">📦 元素: <b>${info.element}</b>\n👨‍👩‍👧 父级: ${info.parent}\n🧭 排列: ${flexDir === 'row' ? '水平 ↔' : flexDir === 'column' ? '垂直 ↕' : flexDir}\n📏 父 gap: ${info.gapHint}\n⬅️ 左侧距前元素: ${info.prevGap}\n➡️ 右侧距后元素: ${info.nextGap}\n\n↔ 水平位移: <b>${dx}px</b> (改 left/margin-left)\n↕ 垂直位移: <b>${dy}px</b> (改 top/margin-top)\n\n📐 自身 CSS:\n  margin: ${info.self.marginTop} ${info.self.marginRight} ${info.self.marginBottom} ${info.self.marginLeft}\n  width:  ${info.self.width}\n  height: ${info.self.height}\n\n💡 建议:\n  如果多个元素要一起移 → 改 parent 的 gap/justify-content\n  如果只这个元素移 → 改它的 margin-left/top/bottom/right\n  对齐问题 → justify-content / align-items</pre>`,
+      '🎯 拖拽完成 — 布局诊断',
+      {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '✅ 保持这个位置',
+        cancelButtonText: '↩️ 还原回去',
+        distinguishCancelAndClose: true,
+        customClass: 'dd-result'
+      }
+    ).then(() => {
+      // 用户选"保持" —— 不动元素,给个提示
+      ElMessage.success('元素已停留在当前位置,看效果满意就去改 CSS 吧')
+    }).catch((action) => {
+      if (action === 'cancel') {
+        // 用户点"还原" —— 恢复初始位置,清掉临时样式
+        el.style.left = originL ? originL + 'px' : ''
+        el.style.top = originT ? originT + 'px' : ''
+        if (el.style.position === 'relative' && !originL && !originT) el.style.position = ''
+        ElMessage.info('已还原到初始位置')
+      }
+    })
+  }
+
+  // Alt+D 快捷键
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && (e.key === 'd' || e.key === 'D')) {
+      e.preventDefault()
+      isDebugDrag.value = !isDebugDrag.value
+      document.body.classList.toggle('debug-drag', isDebugDrag.value)
+      ElMessage({
+        message: isDebugDrag.value
+          ? '🎨 调试拖拽 ON — 拖拽任意元素,松开会显示 gap/margin'
+          : '调试拖拽 OFF',
+        type: isDebugDrag.value ? 'info' : 'success',
+        duration: 2500
+      })
+    }
+  })
+
+  // ✅ 核心修复:用 pointerdown + setPointerCapture 替代 mousedown
+  // setPointerCapture 强制把所有后续 pointermove/up 事件都发给 target 元素,
+  // 完全绕过 Element Plus 组件的事件拦截、文本选择、滚动等干扰
+  document.addEventListener('pointerdown', (e) => {
+    if (!document.body.classList.contains('debug-drag')) return
+    if (e.button !== 0) return // 只处理左键
+
+    const target = e.target.closest(
+      'button, [class*="el-"], [class*="head-"], [class*="item-"], [class*="plan-"], [class*="mod-"], .toolbar, .stat, .db-dot, .mobile-tabs, .mtab, .topbar-user, .hero, .memo-drawer'
+    )
+    if (!target) return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    dragging = target
+    // 确保元素可以绝对定位
+    const curPos = getComputedStyle(target).position
+    if (curPos === 'static') target.style.position = 'relative'
+
+    originLeft = parseFloat(target.style.left || target.offsetLeft) || 0
+    originTop = parseFloat(target.style.top || target.offsetTop) || 0
+    startX = e.clientX
+    startY = e.clientY
+
+    target.classList.add('dd-dragging')
+
+    // 🎯 关键:捕获指针,后续所有 move/up 都定向到 target
+    if (target.setPointerCapture) {
+      target.setPointerCapture(e.pointerId)
+    }
+  }, true) // capture: true, 在 Element Plus 之前拦截
+
+  // pointermove 绑定在 document 上,但因为 setPointerCapture,
+  // 事件会被强制 dispatch 到 target 上(冒泡到 document 也能收到)
+  document.addEventListener('pointermove', (e) => {
+    if (!dragging) return
+    const dx = e.clientX - startX
+    const dy = e.clientY - startY
+    dragging.style.left = (originLeft + dx) + 'px'
+    dragging.style.top = (originTop + dy) + 'px'
+    if (tipEl) tipEl.remove()
+    tipEl = makeTip(e.clientX + 12, e.clientY + 12,
+      `↔ ${Math.round(dx)}px  ↕ ${Math.round(dy)}px`)
+  })
+
+  // pointerup — 松手后元素停留在新位置(不再清空 left/top)
+  document.addEventListener('pointerup', (e) => {
+    if (!dragging) return
+    const el = dragging
+    el.classList.remove('dd-dragging')
+    try { el.releasePointerCapture(e.pointerId) } catch(_) {}
+
+    const dx = parseFloat(el.style.left) - originLeft
+    const dy = parseFloat(el.style.top) - originTop
+    dragging = null
+    if (tipEl) tipEl.remove()
+    tipEl = null
+    // 位移 > 2px 才算真拖拽,否则算点选(不弹窗,也不清空样式)
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+      showResult(el, originLeft, originTop)
+    } else {
+      // 只是点选,没真拖 → 清空临时 left/top
+      el.style.left = ''
+      el.style.top = ''
+      if (el.style.position === 'relative') el.style.position = ''
+    }
+  })
+
+  // pointercancel 兜底(指针丢失/窗口失焦等)
+  document.addEventListener('pointercancel', () => {
+    if (!dragging) return
+    dragging.classList.remove('dd-dragging')
+    dragging.style.left = ''
+    dragging.style.top = ''
+    dragging = null
+    if (tipEl) tipEl.remove()
+    tipEl = null
+  })
+}
 
 async function refreshDbBar() {
   if (!dbConnected.value) return
@@ -724,7 +898,7 @@ function dueType(memo) {
         <h1 class="head-title">{{ current.name }}</h1>
         <p class="head-sub">{{ current.subtitle }}</p>
       </div>
-      <!-- 中：统计 + 进度环 -->
+      <!-- 中：统计 + 迷你进度条 -->
       <div class="head-stats">
         <div class="stat">
           <span class="stat-value">{{ items.length }}</span>
@@ -734,30 +908,35 @@ function dueType(memo) {
           <span class="stat-value">{{ doneCount }}</span>
           <span class="stat-label">已完成</span>
         </div>
-        <el-progress type="dashboard" :percentage="progress" :color="current.color" :width="64" />
+        <div class="mini-progress">
+          <span class="mp-num">{{ progress }}</span><span class="mp-suffix">%</span>
+          <el-progress :percentage="progress" :color="current.color" :stroke-width="5" :show-text="false" class="mini-bar" />
+        </div>
       </div>
-      <!-- 右：DB + 检查/同步 + 备忘 + 用户 -->
+      <!-- 右：一竖排按钮 -->
       <div class="head-right">
-        <el-tooltip :content="dbConnected ? 'DB 在线' : 'DB 离线'" placement="bottom">
+        <el-tooltip :content="dbConnected ? 'DB 在线' : 'DB 离线'" placement="left">
           <span class="db-dot" :class="{ offline: !dbConnected }"></span>
         </el-tooltip>
-        <el-tooltip content="检查数据完整性" placement="bottom">
+        <el-tooltip content="检查数据完整性" placement="left">
           <el-button size="small" circle :icon="Search" :loading="checkingDb" @click="checkDbIntegrity" />
         </el-tooltip>
-        <el-tooltip content="手动同步到 DB" placement="bottom" v-if="canEdit">
+        <el-tooltip content="手动同步到 DB" placement="left" v-if="canEdit">
           <el-button size="small" circle type="success" :icon="RefreshRight" :loading="syncingDb" @click="manualSyncToDb" />
         </el-tooltip>
         <el-badge v-if="current.key === 'life'" :value="upcomingCount" :hidden="upcomingCount === 0" class="memo-badge">
-          <el-tooltip content="备忘录" placement="bottom">
+          <el-tooltip content="备忘录" placement="left">
             <el-button size="small" circle :icon="Bell" @click="openMemoDrawer" />
           </el-tooltip>
         </el-badge>
-        <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="bottom">
+        <el-tooltip :content="isDark ? '切到亮色' : '切到暗色'" placement="left">
           <el-button size="small" circle :icon="isDark ? Sunny : Moon" @click="toggleTheme" />
+        </el-tooltip>
+        <el-tooltip content="🎨 调试拖拽 (Alt+D)" placement="left">
+          <el-button size="small" circle :icon="Setting" :type="isDebugDrag ? 'primary' : 'default'" @click="toggleDebugDrag" />
         </el-tooltip>
         <div class="topbar-user">
           <span class="user-badge" :class="currentUser?.role">{{ currentUser?.role === 'admin' ? '管' : '看' }}</span>
-          <span class="user-name">{{ currentUser?.username }}</span>
           <el-icon class="user-logout" @click="doLogout" title="登出"><SwitchButton /></el-icon>
         </div>
       </div>

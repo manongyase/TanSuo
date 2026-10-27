@@ -738,9 +738,9 @@ body {
 /* ---------- page-head（顶栏合并了 Hero 信息：标题 + 统计 + 进度环） ---------- */
 .topbar.page-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 24px;
-  padding: 16px 28px;
+  padding: 16px 20px;
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent) 0%, #fff 60%);
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
@@ -795,17 +795,45 @@ body {
 .head-stats .el-progress--circle { width: 64px !important; height: 64px !important; }
 .head-stats .el-progress--dashboard { width: 64px !important; height: 64px !important; margin: 0 auto; }
 
-.head-right {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.topbar-user {
+/* 迷你进度条替代大圆球 */
+.head-stats .mini-progress {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  min-width: 120px;
+}
+.head-stats .mini-progress .mp-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.head-stats .mini-progress .mp-suffix {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-right: 2px;
+}
+.head-stats .mini-progress .mini-bar {
+  flex: 1;
+  min-width: 80px;
+}
+
+/* 右：一竖排按钮 */
+.head-right {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.head-right .db-dot { margin: 0; }
+.head-right .el-button { margin: 0 !important; }
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
   background: rgba(0,0,0,.04);
   border-radius: 20px;
   font-size: 13px;
@@ -1076,3 +1104,30 @@ body {
   transition: color .2s, background .2s;
 }
 .user-logout:hover { color: #e03131; background: #fff5f5; }
+
+/* ══════════════════════════════════════════════════
+   调试拖拽模式 — Alt+D 开启,再次按关闭
+   仅本地开发用,推 Vercel 前可删掉 enableDebugDrag() 调用
+   ══════════════════════════════════════════════════ */
+body.debug-drag * {
+  cursor: grab !important;
+  user-select: none;
+}
+body.debug-drag .dd-dragging,
+body.debug-drag *:active {
+  cursor: grabbing !important;
+  outline: 2px dashed #5c7cfa !important;
+  outline-offset: 2px;
+  opacity: 0.85;
+  z-index: 9999 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25) !important;
+}
+body.debug-drag::after {
+  content: '🎨 调试模式 · Alt+D 关闭 · 拖拽任意元素';
+  position: fixed; top: 12px; right: 12px;
+  background: #5c7cfa; color: #fff;
+  padding: 6px 12px; border-radius: 20px;
+  font: 12px/1.4 -apple-system, 'PingFang SC', sans-serif;
+  z-index: 99999; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  pointer-events: none;
+}
